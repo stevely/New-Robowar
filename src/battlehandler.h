@@ -97,6 +97,16 @@ enum RW_Event_Type {
     event_shield
 };
 
+enum RW_Error {
+    error_eof,
+    error_stack_uf,
+    error_stack_of,
+    error_end,
+    error_out_of_range,
+    error_unknown_op,
+    error_debug
+};
+
 typedef struct {
     enum RW_Event_Type type;
     RW_Active_Robot *bot;
@@ -121,6 +131,7 @@ typedef struct {
     int hitmatrix[6][6];
     RW_Shot_State shots;
     RW_Event_Queue *queue;
+    int (*err_fn)(RW_Active_Robot*, enum RW_Error);
 } RW_Battle;
 
 /* Robot iterator */
@@ -153,6 +164,8 @@ void RW_Setup_Duel( RW_Battle *b, RW_Robot *b1, RW_Robot *b2 );
 
 RW_Battle * RW_New_Battle();
 
+void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error) );
+
 void RW_Reset_Robot_Iter( RW_Battle *b, RW_Robot_Iter *i, RW_Active_Robot *bot );
 
 RW_Active_Robot * RW_Robot_Next( RW_Robot_Iter *i );
@@ -168,6 +181,8 @@ int RW_Run_Chronon( RW_Battle *b );
 void RW_New_Shot( RW_Battle *b, RW_Active_Robot *bot, enum RW_Shot_Type type, int aim, int power );
 
 int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot );
+
+void RW_Shot_Cleanup( RW_Shot *shot );
 
 void RW_Reset_Shot_Iter( RW_Battle *b, RW_Shot_Iter *si );
 

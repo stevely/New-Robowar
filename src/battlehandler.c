@@ -77,7 +77,7 @@ static int valid_placement( RW_Battle *b, int i ) {
         dist_y = b->bots[i].regs[reg_y] - b->bots[j].regs[reg_y];
         dist_y *= dist_y;
         dist = dist_x + dist_y;
-        if( dist > 50*50 ) { /* Minimum 50 range */
+        if( dist < 50*50 ) { /* Minimum 50 range */
             return 0;
         }
     }
@@ -201,7 +201,12 @@ RW_Battle * RW_New_Battle() {
     b->queue = NULL;
     b->shots.shots = NULL;
     b->shots.bores = NULL;
+    b->err_fn = NULL;
     return b;
+}
+
+void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error) ) {
+    b->err_fn = fn;
 }
 
 void RW_Reset_Robot_Iter( RW_Battle *b, RW_Robot_Iter *i, RW_Active_Robot *bot ) {
@@ -351,10 +356,7 @@ int RW_Run_Chronon( RW_Battle *b ) {
                     }
                 }
             }
-        }
-        /* Check bounds */
-        if( shot->x < -30 || shot->y < -30 || shot->x > 330 || shot->y > 330 ) {
-            shot->active = 0;
+            RW_Shot_Cleanup(shot);
         }
     }
     b->chronon++;

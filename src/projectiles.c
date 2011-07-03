@@ -186,6 +186,16 @@ int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot ) {
     return damage_dealt;
 }
 
+void RW_Shot_Cleanup( RW_Shot *shot ) {
+    /* Check bounds */
+    if( shot->x < -30 || shot->y < -30 || shot->x > 330 || shot->y > 330 ) {
+        shot->active = 0;
+    }
+    if( !shot->timer && (shot->type == shot_explosion || shot->type == shot_nuke) ) {
+        shot->active = 0;
+    }
+}
+
 void RW_Reset_Shot_Iter( RW_Battle *b, RW_Shot_Iter *si ) {
     si->b = b;
     si->shot_index = 0;

@@ -177,6 +177,12 @@ void RW_Handle_Events( RW_Battle *b ) {
     }
 }
 
+static void report_error( RW_Battle *b, RW_Active_Robot *bot, enum RW_Error err ) {
+    if( b->err_fn ) {
+        b->err_fn(bot, err);
+    }
+}
+
 static void suicide_bot( RW_Active_Robot *bot ) {
     bot->damage = 0;
 }
@@ -398,6 +404,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
     do {
         if( bot->code_loc >= bot->robot->code_size ) {
             /* Reached/exceeded EOF, die */
+            report_error(b, bot, error_eof);
             suicide_bot(bot);
             return;
         }
@@ -460,12 +467,28 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 putr(reg1, sqrt((reg2_val*reg2_val)+(reg3_val*reg3_val)));
                 break;
             case op_sin:
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_sin(reg2_val, reg3_val));
+                break;
             case op_cos:
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_cos(reg2_val, reg3_val));
+                break;
             case op_tan:
-            case op_arcsin:
-            case op_arccos:
-            case op_arctan:
                 /* TODO */
+                break;
+            case op_arcsin:
+                /* TODO */
+                break;
+            case op_arccos:
+                /* TODO */
+                break;
+            case op_arctan:
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_atan2(reg2_val, reg3_val));
                 break;
             case op_call:
                 if( push_val(bot, bot->code_loc) ) {
@@ -488,6 +511,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 }
             default:
                 /* Unknown opcode */
+                report_error(b, bot, error_unknown_op);
                 suicide_bot(bot);
                 return;
             case op_two_reg:
@@ -511,6 +535,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         reg2_val = getr(reg2);
                         if( reg2_val < 0 || reg2_val >= 100 ) {
                             /* Out of range */
+                            report_error(b, bot, error_out_of_range);
                             suicide_bot(bot);
                             return;
                         }
@@ -520,6 +545,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         reg1_val = getr(reg1);
                         if( reg1_val < 0 || reg1_val >= 100 ) {
                             /* Out of range */
+                            report_error(b, bot, error_out_of_range);
                             suicide_bot(bot);
                             return;
                         }
@@ -547,6 +573,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_peek:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
+                            report_error(b, bot, error_stack_uf);
                             suicide_bot(bot);
                             return;
                         }
@@ -555,6 +582,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_pop:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
+                            report_error(b, bot, error_stack_uf);
                             suicide_bot(bot);
                             return;
                         }
@@ -572,10 +600,12 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_beep:
                     case op_debug:
                         /* TODO */
+                        report_error(b, bot, error_debug);
                         break;
                     case op_drop:
                         if( bot->stack_loc <= 0 ) {
                             /* Stack underflow */
+                            report_error(b, bot, error_stack_uf);
                             suicide_bot(bot);
                             return;
                         }
@@ -587,6 +617,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_dup:
                         if( bot->stack_loc >= 48 ) {
                             /* Stack overflow */
+                            report_error(b, bot, error_stack_of);
                             suicide_bot(bot);
                             return;
                         }
@@ -602,6 +633,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_return:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
+                            report_error(b, bot, error_stack_uf);
                             suicide_bot(bot);
                             return;
                         }
@@ -614,6 +646,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_swap:
                         if( bot->stack_loc < 2 ) {
                             /* Stack underflow */
+                            report_error(b, bot, error_stack_uf);
                             suicide_bot(bot);
                             return;
                         }

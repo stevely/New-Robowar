@@ -15,7 +15,9 @@
 static SDL_Surface *screen;
 static SDL_Surface *robo;
 static SDL_Surface *bullet;
+static SDL_Surface *explosion;
 static TTF_Font *font;
+static size_t bot_count = 0;
 
 static void load_texture( const char *fname, SDL_Surface **sp ) {
     SDL_Surface *image;
@@ -73,7 +75,22 @@ static void display( RW_Battle *b ) {
     SDL_FillRect(screen, NULL, 0xFFFFFFFF);
     RW_Reset_Shot_Iter(b, &si);
     while( (shot = RW_Shot_Next(&si)) ) {
-        draw_sprite(bullet, shot->x - 1, shot->y - 1);
+        switch( shot->type ) {
+            case shot_bullet:
+            case shot_explosive:
+                draw_sprite(bullet, shot->x - 3, shot->y - 3);
+                break;
+            case shot_explosion:
+                draw_sprite(explosion, shot->x - 36, shot->y - 36);
+                break;
+            default:
+            case shot_hellbore:
+            case shot_missile:
+            case shot_mine:
+            case shot_nuke:
+            case shot_stunner:
+                break;
+        }
     }
     RW_Reset_Robot_Iter(b, &ri, NULL);
     while( (bot = RW_Robot_Next(&ri)) ) {
@@ -87,20 +104,53 @@ static void display( RW_Battle *b ) {
     SDL_Flip(screen);
 }
 
+static int handle_error( RW_Active_Robot* bot, enum RW_Error e ) {
+    fprintf(stdout, "Bot %d: ", bot->id);
+    switch( e ) {
+        case error_eof:
+            fprintf(stdout, "Error: End of file reached!\n");
+            break;
+        case error_stack_uf:
+            fprintf(stdout, "Error: Stack underflow!\n");
+            break;
+        case error_stack_of:
+            fprintf(stdout, "Error: Stack overflow!\n");
+            break;
+        case error_end:
+            fprintf(stdout, "\"End\" instruction executed!\n");
+            break;
+        case error_out_of_range:
+            fprintf(stdout, "Error: Vector access out of range!\n");
+            break;
+        case error_unknown_op:
+            fprintf(stdout, "Error: Unknown instruction!\n");
+            break;
+        case error_debug:
+            fprintf(stdout, "DEBUG\n");
+            break;
+    }
+    return 0;
+}
+
 int main( int argc, char **argv ) {
-    int fps, keyflag;
+    int fps, keyflag, i;
     RW_Battle *b;
-    RW_Robot *bot1, *bot2;
+    RW_Robot *bots[6];
+    RW_Active_Robot *bot;
+    RW_Robot_Iter ri;
     SDL_Event event;
-    if( argc != 3 ) {
-        fprintf(stdout, "Usage: %s robot robot\n", argv[0]);
+    if( argc < 2 ) {
+        fprintf(stdout, "Usage: %s robot [robot]+\n", argv[0]);
         return 0;
     }
-    bot1 = RW_Read_Robot(argv[1]);
-    bot2 = RW_Read_Robot(argv[2]);
+    for( i = 1; i < argc; i++ ) {
+        bots[i-1] = RW_Read_Robot(argv[i]);
+        bot_count++;
+    }
     RW_Reset_Scores();
     b = RW_New_Battle();
-    RW_Setup_Duel(b, bot1, bot2);
+    RW_Set_Error_Callback(b, handle_error);
+    RW_Setup_Battle(b, bots, bot_count);
     if( SDL_Init(SDL_INIT_TIMER) ) {
         return -1;
     }
@@ -114,6 +164,7 @@ int main( int argc, char **argv ) {
     SDL_WM_SetCaption("New RoboWar", "New RoboWar");
     load_texture("bullet.png", &bullet);
     load_texture("robot.png", &robo);
+    load_texture("explosion.png", &explosion);
     font = TTF_OpenFont("/System/Library/Fonts/HelveticaLight.ttf", 12);
     fps = 32;
     keyflag = 0;
@@ -143,8 +194,10 @@ int main( int argc, char **argv ) {
         display(b);
     }
     fprintf(stdout, "Result of battle after %d chronons:\n", b->chronon);
-    fprintf(stdout, "%d: %d points\n", b->bots[0].id, b->score[0]);
-    fprintf(stdout, "%d: %d points\n", b->bots[1].id, b->score[1]);
+    RW_Reset_Robot_Iter(b, &ri, NULL);
+    while( (bot = RW_Robot_Next_Raw(&ri)) ) {
+        fprintf(stdout, "%d: %d points\n", bot->id, b->score[bot->id]);
+    }
     SDL_Quit();
     return 0;
 }
