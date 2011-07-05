@@ -25,3 +25,23 @@ int robo_sin( int n, int angle ) {
 int robo_cos( int n, int angle ) {
     return (int)((double)n * -cos(((double)angle * 2 * M_PI) / 360));
 }
+
+int robo_tan( int n, int angle ) {
+    double result;
+    result = ((double)n * tan(90 - ((double)angle * 2 * M_PI) / 360));
+    if( result > 19999 ) {
+        result = 19999;
+    }
+    else if( result < -19999 ) {
+        result = -19999;
+    }
+    return (int)result;
+}
+
+int robo_asin( int x, int y ) {
+    return (int)(asin((((double)x / (double)y) * 2 * M_PI) / 360));
+}
+
+int robo_acos( int x, int y ) {
+    return (int)(acos((((double)x / (double)y) * 2 * M_PI) / 360));
+}

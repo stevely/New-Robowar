@@ -138,7 +138,7 @@ int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot ) {
         case shot_nuke:
         case shot_mine:
         case shot_missile:
-            if( bot->shield == 0 ) {
+            if( bot->shield <= 0 ) {
                 bot->damage -= shot->power;
             }
             else {
@@ -151,6 +151,9 @@ int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot ) {
                         else {
                             bot->shield -= shot->power * 6;
                         }
+                    }
+                    else {
+                        bot->shield -= shot->power * 3;
                     }
                     if( bot->shield < 0 ) {
                         bot->damage += bot->shield / 3;
@@ -166,6 +169,9 @@ int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot ) {
                         else {
                             bot->shield -= shot->power * 2;
                         }
+                    }
+                    else {
+                        bot->shield -= shot->power;
                     }
                     if( bot->shield < 0 ) {
                         bot->damage += bot->shield;

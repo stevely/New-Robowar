@@ -17,4 +17,10 @@ int robo_sin( int n, int angle );
 
 int robo_cos( int n, int angle );
 
+int robo_tan( int n, int angle );
+
+int robo_asin( int x, int y );
+
+int robo_acos( int x, int y );
+
 #endif

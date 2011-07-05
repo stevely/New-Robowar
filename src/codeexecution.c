@@ -141,7 +141,7 @@ void RW_Handle_Events( RW_Battle *b ) {
                     }
                     else {
                         if( s->buf[i].bot->energy > 0 ) {
-                            energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value);
+                            energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value - s->buf[i].bot->shield);
                             s->buf[i].bot->energy -= energy_used;
                             s->buf[i].bot->shield += energy_used;
                         }
@@ -477,13 +477,19 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 putr(reg1, robo_cos(reg2_val, reg3_val));
                 break;
             case op_tan:
-                /* TODO */
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_tan(reg2_val, reg3_val));
                 break;
             case op_arcsin:
-                /* TODO */
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_asin(reg2_val, reg3_val));
                 break;
             case op_arccos:
-                /* TODO */
+                reg2_val = getr(reg2);
+                reg3_val = getr(reg3);
+                putr(reg1, robo_acos(reg2_val, reg3_val));
                 break;
             case op_arctan:
                 reg2_val = getr(reg2);

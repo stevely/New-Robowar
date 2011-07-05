@@ -299,8 +299,16 @@ int RW_Run_Chronon( RW_Battle *b ) {
                         bot1->energy = bot1->energy_cap;
                     }
                     /* Shield drain */
-                    if( bot1->shield && (bot1->shield > bot1->shield_cap) || b->chronon % 2 ) {
-                        bot1->shield--;
+                    if( bot1->shield > 0 ) {
+                        if( bot1->shield > bot1->shield_cap ) {
+                            bot1->shield--;
+                        }
+                        if( b->chronon % 2 ) {
+                            bot1->shield--;
+                        }
+                    }
+                    else {
+                        bot1->shield = 0;
                     }
                     if( bot1->energy >= 0 ) {
                         x = bot1->regs[reg_x] + bot1->regs[reg_speedx];
