@@ -98,6 +98,7 @@ static void display( RW_Battle *b ) {
         switch( shot->type ) {
             case shot_bullet:
             case shot_explosive:
+            case shot_missile:
                 draw_sprite(bullet, shot->x - 3, shot->y - 3);
                 break;
             case shot_explosion:
@@ -118,7 +119,6 @@ static void display( RW_Battle *b ) {
                 draw_sprite(stunner, shot->x - 4, shot->y - 4);
                 break;
             default:
-            case shot_missile:
             case shot_mine:
             case shot_nuke:
                 break;
@@ -132,7 +132,7 @@ static void display( RW_Battle *b ) {
     SDL_Flip(screen);
 }
 
-static int handle_error( RW_Active_Robot* bot, enum RW_Error e ) {
+static int handle_error( RW_Active_Robot* bot, enum RW_Error e, int val ) {
     fprintf(stdout, "Bot %d: ", bot->id);
     switch( e ) {
         case error_eof:
@@ -154,7 +154,7 @@ static int handle_error( RW_Active_Robot* bot, enum RW_Error e ) {
             fprintf(stdout, "Error: Unknown instruction!\n");
             break;
         case error_debug:
-            fprintf(stdout, "DEBUG\n");
+            fprintf(stdout, "DEBUG: %d\n", val);
             break;
     }
     return 0;

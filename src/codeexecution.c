@@ -80,7 +80,7 @@ void RW_Handle_Events( RW_Battle *b ) {
                         s->buf[i].bot->regs[reg_x] += energy_used / 2;
                     }
                     else {
-                        s->buf[i].bot->regs[reg_x] += energy_used / 2;
+                        s->buf[i].bot->regs[reg_x] -= energy_used / 2;
                     }
                     continue;
                 case event_movey:
@@ -90,26 +90,34 @@ void RW_Handle_Events( RW_Battle *b ) {
                         s->buf[i].bot->regs[reg_y] += energy_used / 2;
                     }
                     else {
-                        s->buf[i].bot->regs[reg_y] += energy_used / 2;
+                        s->buf[i].bot->regs[reg_y] -= energy_used / 2;
                     }
                     continue;
                 case event_speedx:
-                    energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value * 2);
-                    s->buf[i].bot->energy -= energy_used;
-                    if( s->buf[i].value > 0 ) {
-                        s->buf[i].bot->regs[reg_speedx] += energy_used / 2;
+                    if( s->buf[i].bot->regs[reg_speedx] > s->buf[i].value ) {
+                        energy_used = get_energy_used(s->buf[i].bot,
+                            (s->buf[i].bot->regs[reg_speedx] - s->buf[i].value) * 2);
+                        s->buf[i].bot->energy -= energy_used;
+                        s->buf[i].bot->regs[reg_speedx] -= energy_used / 2;
                     }
-                    else {
+                    else if( s->buf[i].bot->regs[reg_speedx] < s->buf[i].value ) {
+                        energy_used = get_energy_used(s->buf[i].bot,
+                            (s->buf[i].value - s->buf[i].bot->regs[reg_speedx]) * 2);
+                        s->buf[i].bot->energy -= energy_used;
                         s->buf[i].bot->regs[reg_speedx] += energy_used / 2;
                     }
                     continue;
                 case event_speedy:
-                    energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value * 2);
-                    s->buf[i].bot->energy -= energy_used;
-                    if( s->buf[i].value > 0 ) {
-                        s->buf[i].bot->regs[reg_speedy] += energy_used / 2;
+                    if( s->buf[i].bot->regs[reg_speedy] > s->buf[i].value ) {
+                        energy_used = get_energy_used(s->buf[i].bot,
+                            (s->buf[i].bot->regs[reg_speedy] - s->buf[i].value) * 2);
+                        s->buf[i].bot->energy -= energy_used;
+                        s->buf[i].bot->regs[reg_speedy] -= energy_used / 2;
                     }
-                    else {
+                    else if( s->buf[i].bot->regs[reg_speedy] < s->buf[i].value ) {
+                        energy_used = get_energy_used(s->buf[i].bot,
+                            (s->buf[i].value - s->buf[i].bot->regs[reg_speedy]) * 2);
+                        s->buf[i].bot->energy -= energy_used;
                         s->buf[i].bot->regs[reg_speedy] += energy_used / 2;
                     }
                     continue;
@@ -177,9 +185,9 @@ void RW_Handle_Events( RW_Battle *b ) {
     }
 }
 
-static void report_error( RW_Battle *b, RW_Active_Robot *bot, enum RW_Error err ) {
+static void report_error( RW_Battle *b, RW_Active_Robot *bot, enum RW_Error err, int val ) {
     if( b->err_fn ) {
-        b->err_fn(bot, err);
+        b->err_fn(bot, err, val);
     }
 }
 
@@ -404,7 +412,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
     do {
         if( bot->code_loc >= bot->robot->code_size ) {
             /* Reached/exceeded EOF, die */
-            report_error(b, bot, error_eof);
+            report_error(b, bot, error_eof, 0);
             suicide_bot(bot);
             return;
         }
@@ -517,7 +525,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 }
             default:
                 /* Unknown opcode */
-                report_error(b, bot, error_unknown_op);
+                report_error(b, bot, error_unknown_op, 0);
                 suicide_bot(bot);
                 return;
             case op_two_reg:
@@ -541,7 +549,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         reg2_val = getr(reg2);
                         if( reg2_val < 0 || reg2_val >= 100 ) {
                             /* Out of range */
-                            report_error(b, bot, error_out_of_range);
+                            report_error(b, bot, error_out_of_range, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -551,7 +559,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         reg1_val = getr(reg1);
                         if( reg1_val < 0 || reg1_val >= 100 ) {
                             /* Out of range */
-                            report_error(b, bot, error_out_of_range);
+                            report_error(b, bot, error_out_of_range, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -579,7 +587,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_peek:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
-                            report_error(b, bot, error_stack_uf);
+                            report_error(b, bot, error_stack_uf, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -588,7 +596,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_pop:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
-                            report_error(b, bot, error_stack_uf);
+                            report_error(b, bot, error_stack_uf, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -598,20 +606,21 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_pushr:
                         push_val(bot, getr(reg1));
                         break;
+                    case op_debug:
+                        report_error(b, bot, error_debug, getr(reg1));
+                        break;
                 }
                 break;
             case op_zero_reg:
                 /* Second level switch statement */
                 switch(reg3) {
                     case op_beep:
-                    case op_debug:
                         /* TODO */
-                        report_error(b, bot, error_debug);
                         break;
                     case op_drop:
                         if( bot->stack_loc <= 0 ) {
                             /* Stack underflow */
-                            report_error(b, bot, error_stack_uf);
+                            report_error(b, bot, error_stack_uf, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -623,7 +632,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_dup:
                         if( bot->stack_loc >= 48 ) {
                             /* Stack overflow */
-                            report_error(b, bot, error_stack_of);
+                            report_error(b, bot, error_stack_of, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -639,7 +648,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_return:
                         if( bot->stack_loc < 0 ) {
                             /* Stack underflow */
-                            report_error(b, bot, error_stack_uf);
+                            report_error(b, bot, error_stack_uf, 0);
                             suicide_bot(bot);
                             return;
                         }
@@ -652,7 +661,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     case op_swap:
                         if( bot->stack_loc < 2 ) {
                             /* Stack underflow */
-                            report_error(b, bot, error_stack_uf);
+                            report_error(b, bot, error_stack_uf, 0);
                             suicide_bot(bot);
                             return;
                         }

@@ -85,7 +85,8 @@ enum ident_onereg {
     op_print    =  5,
     op_peek     =  6,
     op_pop      =  7,
-    op_pushr    =  8
+    op_pushr    =  8,
+    op_debug    =  9
 };
 
 /*
@@ -95,16 +96,15 @@ enum ident_onereg {
    added here. */
 enum ident_zeroreg {
     op_beep     =  0,
-    op_debug    =  1,
-    op_drop     =  2,
-    op_dropall  =  3,
-    op_dup      =  4,
-    op_end      =  5,
-    op_recall   =  6,
-    op_return   =  7,
-    op_store    =  8,
-    op_swap     =  9,
-    op_sync     = 10
+    op_drop     =  1,
+    op_dropall  =  2,
+    op_dup      =  3,
+    op_end      =  4,
+    op_recall   =  5,
+    op_return   =  6,
+    op_store    =  7,
+    op_swap     =  8,
+    op_sync     =  9
 };
 
 enum special_reg {

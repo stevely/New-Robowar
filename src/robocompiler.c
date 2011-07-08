@@ -964,11 +964,11 @@ static int parse_token_list() {
                 tok = one_reg_op(tok, op_sound); break;
             case token_test:
                 tok = one_reg_op(tok, op_test); break;
+            case token_debug:
+                tok = one_reg_op(tok, op_debug); break;
             /* 0-register instructions */
             case token_beep:
                 tok = zero_reg_op(tok, op_beep); break;
-            case token_debug:
-                tok = zero_reg_op(tok, op_debug); break;
             case token_drop:
                 tok = zero_reg_op(tok, op_drop); break;
             case token_dropall:

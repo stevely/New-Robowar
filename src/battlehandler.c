@@ -205,7 +205,7 @@ RW_Battle * RW_New_Battle() {
     return b;
 }
 
-void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error) ) {
+void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error, int val) ) {
     b->err_fn = fn;
 }
 

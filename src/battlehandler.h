@@ -131,7 +131,7 @@ typedef struct {
     int hitmatrix[6][6];
     RW_Shot_State shots;
     RW_Event_Queue *queue;
-    int (*err_fn)(RW_Active_Robot*, enum RW_Error);
+    int (*err_fn)(RW_Active_Robot*, enum RW_Error, int val);
 } RW_Battle;
 
 /* Robot iterator */
@@ -164,7 +164,7 @@ void RW_Setup_Duel( RW_Battle *b, RW_Robot *b1, RW_Robot *b2 );
 
 RW_Battle * RW_New_Battle();
 
-void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error) );
+void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error, int val) );
 
 void RW_Reset_Robot_Iter( RW_Battle *b, RW_Robot_Iter *i, RW_Active_Robot *bot );
 
