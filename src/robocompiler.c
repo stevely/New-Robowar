@@ -409,7 +409,9 @@ enum errors {
     err_labelnum_expected = 6,
     err_duplabel = 7,
     err_colon_expected = 8,
-    err_labelnumreg_expected = 9
+    err_labelnumreg_expected = 9,
+    err_unknown_token = 10,
+    err_nonexistant_label = 11
 };
 
 static int error = 0;
@@ -987,6 +989,8 @@ static int parse_token_list() {
                 tok = zero_reg_op(tok, op_swap); break;
             case token_sync:
                 tok = zero_reg_op(tok, op_sync); break;
+            case token_nop:
+                tok = zero_reg_op(tok, op_nop); break;
             /* Branching instructions */
             case token_if:
             case token_ife:
@@ -1004,7 +1008,9 @@ static int parse_token_list() {
             /* Default: Syntax error */
             default:
                 /* TODO: error and die */
-                return -1;
+                error_line = tok->line_number;
+                error = err_unknown_token;
+                return error;
         }
     }
     return error;
@@ -1075,6 +1081,10 @@ const char * RW_Get_Compiler_Error( int *line_number ) {
             return "Colon expected";
         case err_labelnumreg_expected:
             return "Label, number, or register expected";
+        case err_unknown_token:
+            return "Unknown token";
+        case err_nonexistant_label:
+            return "Non-existant label";
         default:
             return "Unknown error";
     }
@@ -1083,15 +1093,19 @@ const char * RW_Get_Compiler_Error( int *line_number ) {
 RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
     int l, i;
     op_list *ol;
-    RW_Robo_Op *code;
+    RW_Robo_Op *code = NULL;
     if( build_token_list_f(fp) ) {
         /* Error */
-        return NULL;
+        goto cleanup;
     }
     convert_ident_tokens(); /* This phase can't fail, so no error checking */
     if( parse_token_list() ) {
         /* Error */
-        return NULL;
+        goto cleanup;
+    }
+    if( fmap ) {
+        error = err_nonexistant_label;
+        goto cleanup;
     }
     /* Convert tentative instruction list into simple array */
     /* Step 1: Find the total length and allocate memory */
@@ -1119,6 +1133,7 @@ RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
         ol = ol->next;
     }
     /* Step 3: Cleanup */
+    cleanup:
     compiler_cleanup();
     return code;
 }

@@ -389,9 +389,10 @@ static int get_reg( RW_Battle *b, RW_Active_Robot *bot, int reg ) {
     }
 }
 
-static int push_val( RW_Active_Robot *bot, int value ) {
+static int push_val( RW_Battle *b, RW_Active_Robot *bot, int value ) {
     if( bot->stack_loc >= 48 ) {
         /* Stack overflow */
+        report_error(b, bot, error_stack_of, 0);
         suicide_bot(bot);
         return -1;
     }
@@ -505,7 +506,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 putr(reg1, robo_atan2(reg2_val, reg3_val));
                 break;
             case op_call:
-                if( push_val(bot, bot->code_loc) ) {
+                if( push_val(b, bot, bot->code_loc) ) {
                     return;
                 }
                 bot->code_loc = imme;
@@ -520,7 +521,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                 putr(reg_b, sign_extend(imme));
                 continue; /* Skip incrementing instruction counter */
             case op_push:
-                if( push_val(bot, sign_extend(imme)) ) {
+                if( push_val(b, bot, sign_extend(imme)) ) {
                     return;
                 }
             default:
@@ -604,7 +605,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         bot->stack_loc--;
                         break;
                     case op_pushr:
-                        push_val(bot, getr(reg1));
+                        push_val(b, bot, getr(reg1));
                         break;
                     case op_debug:
                         report_error(b, bot, error_debug, getr(reg1));
