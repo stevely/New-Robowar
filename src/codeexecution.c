@@ -94,6 +94,12 @@ void RW_Handle_Events( RW_Battle *b ) {
                     }
                     continue;
                 case event_speedx:
+                    if( s->buf[i].value > 20 ) {
+                        s->buf[i].value = 20;
+                    }
+                    else if( s->buf[i].value < -20 ) {
+                        s->buf[i].value = -20;
+                    }
                     if( s->buf[i].bot->regs[reg_speedx] > s->buf[i].value ) {
                         energy_used = get_energy_used(s->buf[i].bot,
                             (s->buf[i].bot->regs[reg_speedx] - s->buf[i].value) * 2);
@@ -108,6 +114,12 @@ void RW_Handle_Events( RW_Battle *b ) {
                     }
                     continue;
                 case event_speedy:
+                    if( s->buf[i].value > 20 ) {
+                        s->buf[i].value = 20;
+                    }
+                    else if( s->buf[i].value < -20 ) {
+                        s->buf[i].value = -20;
+                    }
                     if( s->buf[i].bot->regs[reg_speedy] > s->buf[i].value ) {
                         energy_used = get_energy_used(s->buf[i].bot,
                             (s->buf[i].bot->regs[reg_speedy] - s->buf[i].value) * 2);
@@ -390,7 +402,7 @@ static int get_reg( RW_Battle *b, RW_Active_Robot *bot, int reg ) {
 }
 
 static int push_val( RW_Battle *b, RW_Active_Robot *bot, int value ) {
-    if( bot->stack_loc >= 48 ) {
+    if( bot->stack_loc >= 49 ) {
         /* Stack overflow */
         report_error(b, bot, error_stack_of, 0);
         suicide_bot(bot);
@@ -631,7 +643,7 @@ void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                         bot->stack_loc = -1;
                         break;
                     case op_dup:
-                        if( bot->stack_loc >= 48 ) {
+                        if( bot->stack_loc >= 49 ) {
                             /* Stack overflow */
                             report_error(b, bot, error_stack_of, 0);
                             suicide_bot(bot);
