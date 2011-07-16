@@ -8,11 +8,12 @@
 #define ROBOCODE_H_
 
 #include <math.h>
+#include <stdint.h>
 
 /*
  * The RoboWar operator type. 32-bits long.
  */
-typedef int RW_Robo_Op;
+typedef uint32_t RW_Robo_Op;
 
 #define opcode_mask 0xF8000000 /* 5-bits long */
 #define opreg1_mask 0x07FC0000 /* 9-bits long */
