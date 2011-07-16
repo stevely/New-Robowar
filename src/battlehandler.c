@@ -108,13 +108,13 @@ static void reset_robot( RW_Active_Robot *bot ) {
     /* Damage */
     switch( bot->robot->hardware.damage ) {
         case 0:
-            bot->damage_cap = 250;
+            bot->damage_cap = 150;
             break;
         case 1:
-            bot->damage_cap = 400;
+            bot->damage_cap = 300;
             break;
         case 2:
-            bot->damage_cap = 600;
+            bot->damage_cap = 450;
             break;
         default:
             bot->damage_cap = 0;
@@ -344,8 +344,7 @@ int RW_Run_Chronon( RW_Battle *b ) {
     RW_Reset_Shot_Iter(b, si);
     while( (shot = RW_Shot_Next(si)) ) {
         /* Move shot */
-        shot->x += shot->dx;
-        shot->y += shot->dy;
+        RW_Shot_Update(shot);
         if( shot->timer ) {
             shot->timer--;
         }

@@ -60,6 +60,8 @@ typedef struct {
     enum RW_Shot_Type type;
     int x;
     int y;
+    int x_raw;
+    int y_raw;
     int dx;
     int dy;
     int active;
@@ -181,6 +183,8 @@ int RW_Run_Chronon( RW_Battle *b );
 void RW_New_Shot( RW_Battle *b, RW_Active_Robot *bot, enum RW_Shot_Type type, int aim, int power );
 
 int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot );
+
+void RW_Shot_Update( RW_Shot *shot );
 
 void RW_Shot_Cleanup( RW_Shot *shot );
 

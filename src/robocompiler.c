@@ -1104,6 +1104,7 @@ RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
         goto cleanup;
     }
     if( fmap ) {
+        fprintf(stderr, "%s\n", fmap->name);
         error = err_nonexistant_label;
         goto cleanup;
     }

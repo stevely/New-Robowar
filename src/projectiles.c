@@ -49,7 +49,9 @@ void RW_New_Shot( RW_Battle *b, RW_Active_Robot *bot, enum RW_Shot_Type type, in
     }
     shot->active = 1;
     shot->x = bot->regs[reg_x];
+    shot->x_raw = shot->x << 8;
     shot->y = bot->regs[reg_y];
+    shot->y_raw = shot->y << 8;
     shot->type = type;
     shot->owner = bot;
     switch(type) {
@@ -101,8 +103,8 @@ void RW_New_Shot( RW_Battle *b, RW_Active_Robot *bot, enum RW_Shot_Type type, in
             return;
     }
     if( speed ) {
-        shot->dx = robo_sin(speed, aim);
-        shot->dy = robo_cos(speed, aim);
+        shot->dx = robo_sin(speed << 8, aim);
+        shot->dy = robo_cos(speed << 8, aim);
     }
 }
 
@@ -115,6 +117,8 @@ static void create_explosion( RW_Battle *b, RW_Active_Robot *bot, int x, int y, 
     shot->active = 1;
     shot->x = x;
     shot->y = y;
+    shot->x_raw = x << 8;
+    shot->y_raw = y << 8;
     shot->dx = 0;
     shot->dy = 0;
     shot->type = shot_explosion;
@@ -190,6 +194,13 @@ int RW_Handle_Shot_Hit( RW_Battle *b, RW_Active_Robot *bot, RW_Shot *shot ) {
     }
     shot->active = 0;
     return damage_dealt;
+}
+
+void RW_Shot_Update( RW_Shot *shot ) {
+    shot->x_raw += shot->dx;
+    shot->x = shot->x_raw >> 8;
+    shot->y_raw += shot->dy;
+    shot->y = shot->y_raw >> 8;
 }
 
 void RW_Shot_Cleanup( RW_Shot *shot ) {
