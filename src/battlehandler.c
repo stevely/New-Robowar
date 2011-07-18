@@ -252,7 +252,7 @@ int RW_Alive_Robots( RW_Battle *b ) {
 }
 
 int RW_Run_Chronon( RW_Battle *b ) {
-    int i, j, x, y, radius;
+    int i, j, x, y, radius, instruction_count;
     RW_Shot *shot;
     RW_Active_Robot *bot1, *bot2;
     RW_Robot_Iter iter1, iter2, *i1, *i2;
@@ -327,14 +327,25 @@ int RW_Run_Chronon( RW_Battle *b ) {
                         }
                         bot1->regs[reg_x] = x;
                         bot1->regs[reg_y] = y;
-                        RW_Run_Code(b, bot1);
+                        bot1->synced = 0;
+                    }
+                    else {
+                        bot1->synced = 1; /* Skip code execution */
                     }
                 }
             }
         }
     }
     /* Phase 2 */
-    RW_Handle_Events(b);
+    for( instruction_count = 0; instruction_count < 50; instruction_count++ ) {
+        RW_Reset_Robot_Iter(b, i1, NULL);
+        while( (bot1 = RW_Robot_Next(i1)) ) {
+            if( bot1->active && !bot1->synced ) {
+                bot1->synced = RW_Run_Code(b, bot1);
+            }
+        }
+        RW_Handle_Events(b);
+    }
     /* Phase 3 */
     for( i = 0; i < 6; i++ ) { /* Reset hit matrix */
         for( j = 0; j < 6; j++ ) {

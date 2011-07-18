@@ -60,7 +60,7 @@ static int get_energy_used( RW_Active_Robot *bot, int value ) {
 
 void RW_Handle_Events( RW_Battle *b ) {
     RW_Event_Queue *s;
-    int i;
+    int i, x, y;
     int energy_used;
     enum RW_Shot_Type shot;
     /* Handle events */
@@ -77,20 +77,36 @@ void RW_Handle_Events( RW_Battle *b ) {
                     energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value * 2);
                     s->buf[i].bot->energy -= energy_used;
                     if( s->buf[i].value > 0 ) {
-                        s->buf[i].bot->regs[reg_x] += energy_used / 2;
+                        x = s->buf[i].bot->regs[reg_x] + (energy_used / 2);
+                        if( x > 300 ) {
+                            x = 300;
+                        }
+                        s->buf[i].bot->regs[reg_x] = x;
                     }
                     else {
-                        s->buf[i].bot->regs[reg_x] -= energy_used / 2;
+                        x = s->buf[i].bot->regs[reg_x] - (energy_used / 2);
+                        if( x < 0 ) {
+                            x = 0;
+                        }
+                        s->buf[i].bot->regs[reg_x] = x;
                     }
                     continue;
                 case event_movey:
                     energy_used = get_energy_used(s->buf[i].bot, s->buf[i].value * 2);
                     s->buf[i].bot->energy -= energy_used;
                     if( s->buf[i].value > 0 ) {
-                        s->buf[i].bot->regs[reg_y] += energy_used / 2;
+                        y = s->buf[i].bot->regs[reg_y] + (energy_used / 2);
+                        if( y > 300 ) {
+                            y = 300;
+                        }
+                        s->buf[i].bot->regs[reg_y] = y;
                     }
                     else {
-                        s->buf[i].bot->regs[reg_y] -= energy_used / 2;
+                        y = s->buf[i].bot->regs[reg_y] - (energy_used / 2);
+                        if( y < 0 ) {
+                            y = 0;
+                        }
+                        s->buf[i].bot->regs[reg_y] = y;
                     }
                     continue;
                 case event_speedx:
@@ -413,282 +429,276 @@ static int push_val( RW_Battle *b, RW_Active_Robot *bot, int value ) {
     return 0;
 }
 
-void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
-    int instructions_run, sync;
+int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
     int opcode, reg1, reg2, reg3, imme;
     int reg1_val, reg2_val, reg3_val;
-    instructions_run = 0;
-    sync = 0;
     /* Convenience macros */
 #define putr(r,v) write_reg(b, bot, r, v)
 #define getr(r) get_reg(b, bot, r)
-    do {
-        if( bot->code_loc >= bot->robot->code_size ) {
-            /* Reached/exceeded EOF, die */
-            report_error(b, bot, error_eof, 0);
+    if( bot->code_loc >= bot->robot->code_size ) {
+        /* Reached/exceeded EOF, die */
+        report_error(b, bot, error_eof, 0);
+        suicide_bot(bot);
+        return 1;
+    }
+    decode_op(bot->robot->code[bot->code_loc], opcode, reg1, reg2, reg3, imme);
+    bot->code_loc++;
+    /* The big switch statement */
+    switch( opcode ) {
+        case op_nop:
+            break;
+        case op_ne:
+            putr(reg1, getr(reg2) != getr(reg3));
+            break;
+        case op_eq:
+            putr(reg1, getr(reg2) == getr(reg3));
+            break;
+        case op_lt:
+            putr(reg1, getr(reg2) < getr(reg3));
+            break;
+        case op_gt:
+            putr(reg1, getr(reg2) > getr(reg3));
+            break;
+        case op_add:
+            putr(reg1, getr(reg2) + getr(reg3));
+            break;
+        case op_sub:
+            putr(reg1, getr(reg2) - getr(reg3));
+            break;
+        case op_mul:
+            putr(reg1, getr(reg2) * getr(reg3));
+            break;
+        case op_div:
+            putr(reg1, getr(reg2) / getr(reg3));
+            break;
+        case op_mod:
+            putr(reg1, getr(reg2) % getr(reg3));
+            break;
+        case op_and:
+            putr(reg1, getr(reg2) && getr(reg3));
+            break;
+        case op_or:
+            putr(reg1, getr(reg2) || getr(reg3));
+            break;
+        case op_xor:
+            /* C doesn't have a logical XOR, can you believe that? */
+            putr(reg1, (!!getr(reg2)) ^ (!!getr(reg3)));
+            break;
+        case op_max:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, reg2_val > reg3_val ? reg2_val : reg3_val);
+            break;
+        case op_min:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, reg2_val < reg3_val ? reg2_val : reg3_val);
+            break;
+        case op_dist:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, sqrt((reg2_val*reg2_val)+(reg3_val*reg3_val)));
+            break;
+        case op_sin:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_sin(reg2_val, reg3_val));
+            break;
+        case op_cos:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_cos(reg2_val, reg3_val));
+            break;
+        case op_tan:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_tan(reg2_val, reg3_val));
+            break;
+        case op_arcsin:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_asin(reg2_val, reg3_val));
+            break;
+        case op_arccos:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_acos(reg2_val, reg3_val));
+            break;
+        case op_arctan:
+            reg2_val = getr(reg2);
+            reg3_val = getr(reg3);
+            putr(reg1, robo_atan2(reg2_val, reg3_val));
+            break;
+        case op_call:
+            if( push_val(b, bot, bot->code_loc) ) {
+                return 1;
+            }
+            bot->code_loc = imme;
+            break;
+        case op_jump:
+            bot->code_loc = imme;
+            break;
+        case op_mova:
+            putr(reg_a, sign_extend(imme));
+            return RW_Run_Code(b, bot); /* Op doesn't use CPU time */
+        case op_movb:
+            putr(reg_b, sign_extend(imme));
+            return RW_Run_Code(b, bot); /* Op doesn't use CPU time */
+        case op_push:
+            if( push_val(b, bot, sign_extend(imme)) ) {
+                return 1;
+            }
+        default:
+            /* Unknown opcode */
+            report_error(b, bot, error_unknown_op, 0);
             suicide_bot(bot);
-            return;
-        }
-        decode_op(bot->robot->code[bot->code_loc], opcode, reg1, reg2, reg3, imme);
-        bot->code_loc++;
-        /* The big switch statement */
-        switch( opcode ) {
-            case op_nop:
-                break;
-            case op_ne:
-                putr(reg1, getr(reg2) != getr(reg3));
-                break;
-            case op_eq:
-                putr(reg1, getr(reg2) == getr(reg3));
-                break;
-            case op_lt:
-                putr(reg1, getr(reg2) < getr(reg3));
-                break;
-            case op_gt:
-                putr(reg1, getr(reg2) > getr(reg3));
-                break;
-            case op_add:
-                putr(reg1, getr(reg2) + getr(reg3));
-                break;
-            case op_sub:
-                putr(reg1, getr(reg2) - getr(reg3));
-                break;
-            case op_mul:
-                putr(reg1, getr(reg2) * getr(reg3));
-                break;
-            case op_div:
-                putr(reg1, getr(reg2) / getr(reg3));
-                break;
-            case op_mod:
-                putr(reg1, getr(reg2) % getr(reg3));
-                break;
-            case op_and:
-                putr(reg1, getr(reg2) && getr(reg3));
-                break;
-            case op_or:
-                putr(reg1, getr(reg2) || getr(reg3));
-                break;
-            case op_xor:
-                /* C doesn't have a logical XOR, can you believe that? */
-                putr(reg1, (!!getr(reg2)) ^ (!!getr(reg3)));
-                break;
-            case op_max:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, reg2_val > reg3_val ? reg2_val : reg3_val);
-                break;
-            case op_min:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, reg2_val < reg3_val ? reg2_val : reg3_val);
-                break;
-            case op_dist:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, sqrt((reg2_val*reg2_val)+(reg3_val*reg3_val)));
-                break;
-            case op_sin:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_sin(reg2_val, reg3_val));
-                break;
-            case op_cos:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_cos(reg2_val, reg3_val));
-                break;
-            case op_tan:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_tan(reg2_val, reg3_val));
-                break;
-            case op_arcsin:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_asin(reg2_val, reg3_val));
-                break;
-            case op_arccos:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_acos(reg2_val, reg3_val));
-                break;
-            case op_arctan:
-                reg2_val = getr(reg2);
-                reg3_val = getr(reg3);
-                putr(reg1, robo_atan2(reg2_val, reg3_val));
-                break;
-            case op_call:
-                if( push_val(b, bot, bot->code_loc) ) {
-                    return;
-                }
-                bot->code_loc = imme;
-                break;
-            case op_jump:
-                bot->code_loc = imme;
-                break;
-            case op_mova:
-                putr(reg_a, sign_extend(imme));
-                continue; /* Skip incrementing instruction counter */
-            case op_movb:
-                putr(reg_b, sign_extend(imme));
-                continue; /* Skip incrementing instruction counter */
-            case op_push:
-                if( push_val(b, bot, sign_extend(imme)) ) {
-                    return;
-                }
-            default:
-                /* Unknown opcode */
-                report_error(b, bot, error_unknown_op, 0);
-                suicide_bot(bot);
-                return;
-            case op_two_reg:
-                switch(reg3) {
-                    case op_mov:
-                        putr(reg1, getr(reg2));
-                        break;
-                    case op_not:
-                        putr(reg1, !getr(reg2));
-                        break;
-                    case op_chs:
-                        putr(reg1, -1 * getr(reg2));
-                        break;
-                    case op_abs:
-                        putr(reg1, abs(getr(reg2)));
-                        break;
-                    case op_sqrt:
-                        putr(reg1, sqrt(getr(reg2)));
-                        break;
-                    case op_vrecall:
-                        reg2_val = getr(reg2);
-                        if( reg2_val < 0 || reg2_val >= 100 ) {
-                            /* Out of range */
-                            report_error(b, bot, error_out_of_range, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        putr(reg1, bot->vector[reg2_val]);
-                        break;
-                    case op_vstore:
-                        reg1_val = getr(reg1);
-                        if( reg1_val < 0 || reg1_val >= 100 ) {
-                            /* Out of range */
-                            report_error(b, bot, error_out_of_range, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        bot->vector[reg1_val] = getr(reg2);
-                        break;
-                    case op_setparam:
-                        /* TODO */
-                        break;
-                }
-                break;
-            case op_one_reg:
-                switch(reg3) {
-                    case op_test:
-                        if( !getr(reg1) ) {
-                            bot->code_loc++;
-                        }
-                        continue; /* Skip incrementing instruction counter */
-                    case op_icon:
-                    case op_sound:
-                    case op_roll:
-                    case op_random:
-                    case op_print:
-                        /* TODO */
-                        break;
-                    case op_peek:
-                        if( bot->stack_loc < 0 ) {
-                            /* Stack underflow */
-                            report_error(b, bot, error_stack_uf, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        putr(reg1, bot->stack[bot->stack_loc]);
-                        break;
-                    case op_pop:
-                        if( bot->stack_loc < 0 ) {
-                            /* Stack underflow */
-                            report_error(b, bot, error_stack_uf, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        putr(reg1, bot->stack[bot->stack_loc]);
-                        bot->stack_loc--;
-                        break;
-                    case op_pushr:
-                        push_val(b, bot, getr(reg1));
-                        break;
-                    case op_debug:
-                        report_error(b, bot, error_debug, getr(reg1));
-                        break;
-                }
-                break;
-            case op_zero_reg:
-                /* Second level switch statement */
-                switch(reg3) {
-                    case op_beep:
-                        /* TODO */
-                        break;
-                    case op_drop:
-                        if( bot->stack_loc <= 0 ) {
-                            /* Stack underflow */
-                            report_error(b, bot, error_stack_uf, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        bot->stack_loc--;
-                        break;
-                    case op_dropall:
-                        bot->stack_loc = -1;
-                        break;
-                    case op_dup:
-                        if( bot->stack_loc >= 49 ) {
-                            /* Stack overflow */
-                            report_error(b, bot, error_stack_of, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        bot->stack[bot->stack_loc+1] = bot->stack[bot->stack_loc];
-                        bot->stack_loc++;
-                        break;
-                    case op_end:
+            return 1;
+        case op_two_reg:
+            switch(reg3) {
+                case op_mov:
+                    putr(reg1, getr(reg2));
+                    break;
+                case op_not:
+                    putr(reg1, !getr(reg2));
+                    break;
+                case op_chs:
+                    putr(reg1, -1 * getr(reg2));
+                    break;
+                case op_abs:
+                    putr(reg1, abs(getr(reg2)));
+                    break;
+                case op_sqrt:
+                    putr(reg1, sqrt(getr(reg2)));
+                    break;
+                case op_vrecall:
+                    reg2_val = getr(reg2);
+                    if( reg2_val < 0 || reg2_val >= 100 ) {
+                        /* Out of range */
+                        report_error(b, bot, error_out_of_range, 0);
                         suicide_bot(bot);
-                        return;
-                    case op_recall:
-                        /* TODO */
-                        break;
-                    case op_return:
-                        if( bot->stack_loc < 0 ) {
-                            /* Stack underflow */
-                            report_error(b, bot, error_stack_uf, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        bot->code_loc = bot->stack[bot->stack_loc];
-                        bot->stack_loc--;
-                        break;
-                    case op_store:
-                        /* TODO */
-                        break;
-                    case op_swap:
-                        if( bot->stack_loc < 2 ) {
-                            /* Stack underflow */
-                            report_error(b, bot, error_stack_uf, 0);
-                            suicide_bot(bot);
-                            return;
-                        }
-                        reg1 = bot->stack[bot->stack_loc];
-                        bot->stack[bot->stack_loc] = bot->stack[bot->stack_loc - 1];
-                        bot->stack[bot->stack_loc - 1] = reg1;
-                        break;
-                    case op_sync:
-                        sync = 1;
-                        break;
-                }
-        }
-        instructions_run++;
-    } while( !sync && instructions_run < 50 );
+                        return 1;
+                    }
+                    putr(reg1, bot->vector[reg2_val]);
+                    break;
+                case op_vstore:
+                    reg1_val = getr(reg1);
+                    if( reg1_val < 0 || reg1_val >= 100 ) {
+                        /* Out of range */
+                        report_error(b, bot, error_out_of_range, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    bot->vector[reg1_val] = getr(reg2);
+                    break;
+                case op_setparam:
+                    /* TODO */
+                    break;
+            }
+            break;
+        case op_one_reg:
+            switch(reg3) {
+                case op_test:
+                    if( !getr(reg1) ) {
+                        bot->code_loc++;
+                    }
+                    return RW_Run_Code(b, bot); /* Op doesn't use CPU time */
+                case op_icon:
+                case op_sound:
+                case op_roll:
+                case op_random:
+                case op_print:
+                    /* TODO */
+                    break;
+                case op_peek:
+                    if( bot->stack_loc < 0 ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    putr(reg1, bot->stack[bot->stack_loc]);
+                    break;
+                case op_pop:
+                    if( bot->stack_loc < 0 ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    putr(reg1, bot->stack[bot->stack_loc]);
+                    bot->stack_loc--;
+                    break;
+                case op_pushr:
+                    push_val(b, bot, getr(reg1));
+                    break;
+                case op_debug:
+                    report_error(b, bot, error_debug, getr(reg1));
+                    break;
+            }
+            break;
+        case op_zero_reg:
+            /* Second level switch statement */
+            switch(reg3) {
+                case op_beep:
+                    /* TODO */
+                    break;
+                case op_drop:
+                    if( bot->stack_loc <= 0 ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    bot->stack_loc--;
+                    break;
+                case op_dropall:
+                    bot->stack_loc = -1;
+                    break;
+                case op_dup:
+                    if( bot->stack_loc >= 49 ) {
+                        /* Stack overflow */
+                        report_error(b, bot, error_stack_of, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    bot->stack[bot->stack_loc+1] = bot->stack[bot->stack_loc];
+                    bot->stack_loc++;
+                    break;
+                case op_end:
+                    suicide_bot(bot);
+                    return 1;
+                case op_recall:
+                    /* TODO */
+                    break;
+                case op_return:
+                    if( bot->stack_loc < 0 ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    bot->code_loc = bot->stack[bot->stack_loc];
+                    bot->stack_loc--;
+                    break;
+                case op_store:
+                    /* TODO */
+                    break;
+                case op_swap:
+                    if( bot->stack_loc < 2 ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    reg1 = bot->stack[bot->stack_loc];
+                    bot->stack[bot->stack_loc] = bot->stack[bot->stack_loc - 1];
+                    bot->stack[bot->stack_loc - 1] = reg1;
+                    break;
+                case op_sync:
+                    return 1;
+            }
+    }
+    return 0;
     /* Clear the helper macros to avoid mucking up the namespace */
 #undef putr
 #undef getr

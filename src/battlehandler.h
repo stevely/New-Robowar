@@ -37,6 +37,7 @@ typedef struct {
     int active;
     int stunned;
     int weakened_shields;
+    int synced;
     unsigned int code_loc;
     unsigned int stack[50];
     int stack_loc;
@@ -196,6 +197,6 @@ RW_Shot * RW_Shot_Next( RW_Shot_Iter *si );
 
 void RW_Handle_Events( RW_Battle *b );
 
-void RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot );
+int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot );
 
 #endif
