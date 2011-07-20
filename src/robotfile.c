@@ -302,7 +302,7 @@ RW_Robot_File_Entry * RW_Create_Robot_File_Entry( RW_Robot_File_Entry *entry,
 }
 
 /* Note: This is a shallow free. Data beyond the file entry list is not freed. */
-void RW_free_Robot_File_Entry( RW_Robot_File_Entry *entry ) {
+void RW_Free_Robot_File_Entry( RW_Robot_File_Entry *entry ) {
     RW_Robot_File_Entry *e;
     while( entry ) {
         e = entry;

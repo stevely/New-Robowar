@@ -240,31 +240,6 @@ static int ident_compare( char *c1, char *c2 ) {
     return 0;
 }
 
-static int token_convert( token_list *tok, char *c, enum token t ) {
-    if( ident_compare(tok->ident, c) ) {
-        tok->t = t;
-        free(tok->ident);
-        tok->ident = NULL;
-        return 1;
-    }
-    else {
-        return 0;
-    }
-}
-
-static int reg_convert( token_list *tok, char *c, enum special_reg r ) {
-    if( ident_compare(tok->ident, c) ) {
-        tok->t = token_reg;
-        tok->value = (int)r;
-        free(tok->ident);
-        tok->ident = NULL;
-        return 1;
-    }
-    else {
-        return 0;
-    }
-}
-
 static int reg_check( token_list *tok ) {
     int value, i;
     char *c = tok->ident;
@@ -291,108 +266,263 @@ static int reg_check( token_list *tok ) {
     }
 }
 
-/*
- * Converts all the ident tokens we generated in the first pass of the lexer into
- * proper tokens. This will vastly simplify the parse phase.
- */
+typedef struct token_trie {
+    char val;
+    union {
+        enum token tok;
+        enum special_reg reg;
+        int none;
+    } type;
+    int pick;
+    struct token_trie *next;
+    struct token_trie *child;
+} token_trie;
+
+static token_trie *parser_trie = NULL;
+
+static void insert_into_trie( char *name, enum token t, enum special_reg r, int which ) {
+    char *c = name;
+    token_trie *trie;
+    token_trie *trie_parent;
+    token_trie *trie_sibling = NULL;
+    /* If this is the first entry, we need to make it and move to the next level */
+    if( parser_trie == NULL ) {
+        parser_trie = (token_trie*)malloc(sizeof(token_trie));
+        parser_trie->val = *c;
+        parser_trie->next = NULL;
+        parser_trie->child = NULL;
+        c++;
+        trie_parent = parser_trie;
+        trie = NULL;
+    }
+    /* Otherwise we start at the top level */
+    else {
+        trie_parent = NULL;
+        trie = parser_trie;
+    }
+    while( *c ) {
+        if( !trie ) {
+            trie = (token_trie*)malloc(sizeof(token_trie));
+            trie->val = *c;
+            trie->next = NULL;
+            trie->child = NULL;
+            c++;
+            /* If we have a sibling, attach new node to it */
+            if( trie_sibling ) {
+                trie_sibling->next = trie;
+                trie_sibling = NULL;
+            }
+            /* Otherwise attach it to the parent */
+            else if( trie_parent ) {
+                trie_parent->child = trie;
+            }
+            /* Still have characters to go, so no endpoint */
+            if( *c ) {
+                trie->pick = 0;
+                trie_parent = trie;
+                trie = trie->child;
+            }
+            /* Hit the end of the entry, so set the values */
+            else {
+                if( which == 1 ) {
+                    trie->type.tok = t;
+                    trie->pick = 1;
+                }
+                else if( which == 2 ) {
+                    trie->type.reg = r;
+                    trie->pick = 2;
+                }
+                else {
+                    trie->pick = 0;
+                }
+            }
+        }
+        /* Node already exists, so traverse */
+        else {
+            if( trie->val == *c ) {
+                c++;
+                if( *c == 0 ) {
+                    if( which == 1 ) {
+                        trie->type.tok = t;
+                        trie->pick = 1;
+                    }
+                    else if( which == 2 ) {
+                        trie->type.reg = r;
+                        trie->pick = 2;
+                    }
+                    else {
+                        trie->pick = 0;
+                    }
+                }
+                trie_parent = trie;
+                trie = trie->child;
+                trie_sibling = NULL;
+            }
+            else {
+                trie_sibling = trie;
+                trie = trie->next;
+            }
+        }
+    }
+}
+
+static void insert_token( char *name, enum token t ) {
+    insert_into_trie(name, t, 0, 1);
+}
+
+static void insert_register( char *name, enum special_reg r ) {
+    insert_into_trie(name, 0, r, 2);
+}
+
+static token_trie * trie_lookup( char *name ) {
+    token_trie *t = parser_trie;
+    char *n = name;
+    while( *n ) {
+        if( !t ) {
+            return NULL;
+        }
+        else {
+            if( t->val == *n ) {
+                n++;
+                if( *n ) {
+                    t = t->child;
+                }
+                else {
+                    return t;
+                }
+            }
+            else {
+                t = t->next;
+            }
+        }
+    }
+    return NULL;
+}
+
+static int convert_ident_token( token_list *tok ) {
+    token_trie *t = trie_lookup(tok->ident);
+    if( t ) {
+        if( t->pick == 1 ) {
+            tok->t = t->type.tok;
+        }
+        else if( t->pick == 2 ) {
+            tok->t = token_reg;
+            tok->value = (int)t->type.reg;
+        }
+        else {
+            return 0;
+        }
+        free(tok->ident);
+        tok->ident = NULL;
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 static void convert_ident_tokens() {
     token_list *tok = tl;
+    /* Step 1: Build trie */
+    /* Instructions */
+    insert_token("abs", token_abs);
+    insert_token("add", token_add);
+    insert_token("and", token_and);
+    insert_token("arccos", token_arccos);
+    insert_token("arcsin", token_arcsin);
+    insert_token("arctan", token_arctan);
+    insert_token("beep", token_beep);
+    insert_token("call", token_call);
+    insert_token("chs", token_chs);
+    insert_token("cos", token_cos);
+    insert_token("debug", token_debug);
+    insert_token("dist", token_dist);
+    insert_token("div", token_div);
+    insert_token("drop", token_drop);
+    insert_token("dropall", token_dropall);
+    insert_token("dup", token_dup);
+    insert_token("end", token_end);
+    insert_token("eq", token_eq);
+    insert_token("gt", token_gt);
+    insert_token("icon", token_icon);
+    insert_token("if", token_if);
+    insert_token("ife", token_ife);
+    insert_token("ifeg", token_ifeg);
+    insert_token("ifg", token_ifg);
+    insert_token("jump", token_jump);
+    insert_token("lt", token_lt);
+    insert_token("max", token_max);
+    insert_token("min", token_min);
+    insert_token("mod", token_mod);
+    insert_token("mov", token_mov);
+    insert_token("mul", token_mul);
+    insert_token("ne", token_ne);
+    insert_token("nop", token_nop);
+    insert_token("not", token_not);
+    insert_token("or", token_or);
+    insert_token("peek", token_peek);
+    insert_token("pop", token_pop);
+    insert_token("print", token_print);
+    insert_token("push", token_push);
+    insert_token("random", token_random);
+    insert_token("recall", token_recall);
+    insert_token("return", token_return);
+    insert_token("roll", token_roll);
+    insert_token("setparam", token_setparam);
+    insert_token("sin", token_sin);
+    insert_token("sound", token_sound);
+    insert_token("sqrt", token_sqrt);
+    insert_token("store", token_store);
+    insert_token("sub", token_sub);
+    insert_token("swap", token_swap);
+    insert_token("sync", token_sync);
+    insert_token("tan", token_tan);
+    insert_token("test", token_test);
+    insert_token("vrecall", token_vrecall);
+    insert_token("vstore", token_vstore);
+    insert_token("xor", token_xor);
+    /* Registers */
+    insert_register("aim", reg_aim);
+    insert_register("bullet", reg_bullet);
+    insert_register("channel", reg_channel);
+    insert_register("chronon", reg_chronon);
+    insert_register("collision", reg_collision);
+    insert_register("damage", reg_damage);
+    insert_register("energy", reg_energy);
+    insert_register("fire", reg_fire);
+    insert_register("friend", reg_friend);
+    insert_register("hellbore", reg_hellbore);
+    insert_register("history", reg_history);
+    insert_register("id", reg_id);
+    insert_register("kills", reg_kills);
+    insert_register("look", reg_look);
+    insert_register("mine", reg_mine);
+    insert_register("missile", reg_missile);
+    insert_register("movex", reg_movex);
+    insert_register("movey", reg_movey);
+    insert_register("nuke", reg_nuke);
+    insert_register("probe", reg_probe);
+    insert_register("radar", reg_radar);
+    insert_register("range", reg_range);
+    insert_register("robots", reg_robots);
+    insert_register("scan", reg_scan);
+    insert_register("shield", reg_shield);
+    insert_register("signal", reg_signal);
+    insert_register("speedx", reg_speedx);
+    insert_register("speedy", reg_speedy);
+    insert_register("stunner", reg_stunner);
+    insert_register("teammates", reg_teammates);
+    insert_register("wall", reg_wall);
+    insert_register("x", reg_x);
+    insert_register("y", reg_y);
+    /* Step 2: Convert tokens */
     while( tok != NULL ) {
         if( tok->t == token_ident ) {
-            /* Instructions */
-            if( token_convert(tok, "abs", token_abs) );
-            else if( token_convert(tok, "add", token_add) );
-            else if( token_convert(tok, "and", token_and) );
-            else if( token_convert(tok, "arccos", token_arccos) );
-            else if( token_convert(tok, "arcsin", token_arcsin) );
-            else if( token_convert(tok, "arctan", token_arctan) );
-            else if( token_convert(tok, "beep", token_beep) );
-            else if( token_convert(tok, "call", token_call) );
-            else if( token_convert(tok, "chs", token_chs) );
-            else if( token_convert(tok, "cos", token_cos) );
-            else if( token_convert(tok, "debug", token_debug) );
-            else if( token_convert(tok, "dist", token_dist) );
-            else if( token_convert(tok, "div", token_div) );
-            else if( token_convert(tok, "drop", token_drop) );
-            else if( token_convert(tok, "dropall", token_dropall) );
-            else if( token_convert(tok, "dup", token_dup) );
-            else if( token_convert(tok, "end", token_end) );
-            else if( token_convert(tok, "eq", token_eq) );
-            else if( token_convert(tok, "gt", token_gt) );
-            else if( token_convert(tok, "icon", token_icon) );
-            else if( token_convert(tok, "if", token_if) );
-            else if( token_convert(tok, "ife", token_ife) );
-            else if( token_convert(tok, "ifeg", token_ifeg) );
-            else if( token_convert(tok, "ifg", token_ifg) );
-            else if( token_convert(tok, "jump", token_jump) );
-            else if( token_convert(tok, "lt", token_lt) );
-            else if( token_convert(tok, "max", token_max) );
-            else if( token_convert(tok, "min", token_min) );
-            else if( token_convert(tok, "mod", token_mod) );
-            else if( token_convert(tok, "mov", token_mov) );
-            else if( token_convert(tok, "mul", token_mul) );
-            else if( token_convert(tok, "ne", token_ne) );
-            else if( token_convert(tok, "nop", token_nop) );
-            else if( token_convert(tok, "not", token_not) );
-            else if( token_convert(tok, "or", token_or) );
-            else if( token_convert(tok, "peek", token_peek) );
-            else if( token_convert(tok, "pop", token_pop) );
-            else if( token_convert(tok, "print", token_print) );
-            else if( token_convert(tok, "push", token_push) );
-            else if( token_convert(tok, "random", token_random) );
-            else if( token_convert(tok, "recall", token_recall) );
-            else if( token_convert(tok, "return", token_return) );
-            else if( token_convert(tok, "roll", token_roll) );
-            else if( token_convert(tok, "setparam", token_setparam) );
-            else if( token_convert(tok, "sin", token_sin) );
-            else if( token_convert(tok, "sound", token_sound) );
-            else if( token_convert(tok, "sqrt", token_sqrt) );
-            else if( token_convert(tok, "store", token_store) );
-            else if( token_convert(tok, "sub", token_sub) );
-            else if( token_convert(tok, "swap", token_swap) );
-            else if( token_convert(tok, "sync", token_sync) );
-            else if( token_convert(tok, "tan", token_tan) );
-            else if( token_convert(tok, "test", token_test) );
-            else if( token_convert(tok, "vrecall", token_vrecall) );
-            else if( token_convert(tok, "vstore", token_vstore) );
-            else if( token_convert(tok, "xor", token_xor) );
-            /* Registers */
-            else if( reg_convert(tok, "aim", reg_aim) );
-            else if( reg_convert(tok, "bullet", reg_bullet) );
-            else if( reg_convert(tok, "channel", reg_channel) );
-            else if( reg_convert(tok, "chronon", reg_chronon) );
-            else if( reg_convert(tok, "collision", reg_collision) );
-            else if( reg_convert(tok, "damage", reg_damage) );
-            else if( reg_convert(tok, "energy", reg_energy) );
-            else if( reg_convert(tok, "fire", reg_fire) );
-            else if( reg_convert(tok, "friend", reg_friend) );
-            else if( reg_convert(tok, "hellbore", reg_hellbore) );
-            else if( reg_convert(tok, "history", reg_history) );
-            else if( reg_convert(tok, "id", reg_id) );
-            else if( reg_convert(tok, "kills", reg_kills) );
-            else if( reg_convert(tok, "look", reg_look) );
-            else if( reg_convert(tok, "mine", reg_mine) );
-            else if( reg_convert(tok, "missile", reg_missile) );
-            else if( reg_convert(tok, "movex", reg_movex) );
-            else if( reg_convert(tok, "movey", reg_movey) );
-            else if( reg_convert(tok, "nuke", reg_nuke) );
-            else if( reg_convert(tok, "probe", reg_probe) );
-            else if( reg_convert(tok, "radar", reg_radar) );
-            else if( reg_convert(tok, "range", reg_range) );
-            else if( reg_convert(tok, "robots", reg_robots) );
-            else if( reg_convert(tok, "scan", reg_scan) );
-            else if( reg_convert(tok, "shield", reg_shield) );
-            else if( reg_convert(tok, "signal", reg_signal) );
-            else if( reg_convert(tok, "speedx", reg_speedx) );
-            else if( reg_convert(tok, "speedy", reg_speedy) );
-            else if( reg_convert(tok, "stunner", reg_stunner) );
-            else if( reg_convert(tok, "teammates", reg_teammates) );
-            else if( reg_convert(tok, "wall", reg_wall) );
-            else if( reg_convert(tok, "x", reg_x) );
-            else if( reg_convert(tok, "y", reg_y) );
-            else if( reg_check(tok) );
-            else { /* Default to label */
-                tok->t = token_label;
+            if( !convert_ident_token(tok) ) {
+                if( !reg_check(tok) ) {
+                    /* Default to label */
+                    tok->t = token_label;
+                }
             }
         }
         tok = tok->next;
@@ -1016,6 +1146,18 @@ static int parse_token_list() {
     return error;
 }
 
+/* Need a separate function to recursively walk the tree */
+static void free_trie( token_trie *t ) {
+    if( !t ) {
+        return;
+    }
+    else {
+        free_trie(t->next);
+        free_trie(t->child);
+        free(t);
+    }
+}
+
 static void compiler_cleanup() {
     token_list *tokens, *t;
     label_loc_map *map, *m;
@@ -1031,6 +1173,7 @@ static void compiler_cleanup() {
         free(t);
     }
     tl_end = NULL;
+    free_trie(parser_trie);
     /* Note: The label/loc maps use shallow copies of the ident fields from the
        token list for the name fields. These strings are freed when the token
        list is freed, so we don't have to deal with them here. */
