@@ -5,37 +5,44 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "robocode.h"
 #include "robocompiler.h"
 #include "robotfile.h"
 
 void write_out_bot( const char *fname, RW_Robo_Op *code, size_t code_size ) {
+    RW_Robot_File_Entry *e = NULL;
+    RW_Hardware_Spec hw;
     FILE *fp;
-    RW_Robo_Op *c;
-    RW_Robot_File output;
+    char *n;
+    int i,j;
     fp = fopen(fname, "wb");
     if( fp ) {
-        c = code;
-        /* Setup file */
-        output.magic = magic_field;
-        output.version = version_number;
+        for( i = 0; fname[i]; i++ ) ;
+        n = (char*)malloc(sizeof(char) * (i+1));
+        for( j = 0; j < i && fname[j] != '.'; j++ ) {
+            n[j] = fname[j];
+        }
+        n[j] = 0;
         /* Hard-code hardware for now */
-        output.hardware.energy = 2;
-        output.hardware.damage = 2;
-        output.hardware.shield = 2;
-        output.hardware.bullet = 2;
-        output.hardware.probes = 1;
-        output.hardware.negenergy = 1;
-        output.hardware.hellbore = 1;
-        output.hardware.mine = 1;
-        output.hardware.missile = 1;
-        output.hardware.tacnuke = 1;
-        output.hardware.stunner = 1;
-        /* Setup file entry */
-        fwrite(&output, sizeof(RW_Robot_File), 1, fp);
-        fwrite(&code_size, sizeof(unsigned int), 1, fp);
-        fwrite("robocode", sizeof(char), 9, fp);
-        fwrite(code, sizeof(RW_Robo_Op), code_size, fp);
+        hw.energy = 2;
+        hw.damage = 2;
+        hw.shield = 2;
+        hw.bullet = 2;
+        hw.probes = 1;
+        hw.negenergy = 1;
+        hw.hellbore = 1;
+        hw.mine = 1;
+        hw.missile = 1;
+        hw.tacnuke = 1;
+        hw.stunner = 1;
+        /* Create entry for code */
+        e = RW_Create_Robot_File_Entry(e, RW_CODE_ENTRY, code_size, sizeof(RW_Robo_Op), code);
+        /* Write out robot file */
+        RW_Write_Robot_File(fp, n, hw, e);
+        /* Cleanup */
+        RW_Free_Robot_File_Entry(e);
+        free(n);
         fclose(fp);
     }
 }

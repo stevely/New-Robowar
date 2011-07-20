@@ -7,11 +7,13 @@
 #ifndef ROBOTFILE_H_
 #define ROBOTFILE_H_
 
+#include <stdio.h>
+#include <stdint.h>
 #include "robocode.h"
 
-#define magic_field 0x524F424F /* ROBO */
-
-#define version_number 1
+#define RW_MAGIC { 'R', 'O', 'B', 'O' }
+#define RW_CODE_ENTRY "robocode"
+#define RW_VERSION 2
 
 typedef struct {
     unsigned char energy;
@@ -28,15 +30,53 @@ typedef struct {
 } RW_Hardware_Spec;
 
 typedef struct {
-    unsigned int size;
-    unsigned char *name;
-    unsigned char *bytes;
-} RW_Robot_File_Entry;
+    char magic[4];
+    uint32_t version;
+    char *name;
+    RW_Hardware_Spec hardware;
+} RW_Robot_File_Header;
 
 typedef struct {
-    unsigned int magic; /* Magic field 'robo' */
-    unsigned int version;
-    RW_Hardware_Spec hardware;
+    char *name;
+    uint32_t length;
+    uint32_t size;
+    void *data;
+} RW_Robot_File_Index;
+
+typedef struct RW_Robot_Index_List {
+    RW_Robot_File_Index i;
+    struct RW_Robot_Index_List *next;
+} RW_Robot_Index_List;
+
+typedef struct {
+    RW_Robot_File_Header *hdr;
+    RW_Robot_Index_List *idx;
 } RW_Robot_File;
+
+typedef struct RW_Robot_File_Entry {
+    char *name;
+    size_t length;
+    size_t size;
+    void *data;
+    struct RW_Robot_File_Entry *next;
+} RW_Robot_File_Entry;
+
+/* Reading robot files */
+RW_Robot_File * RW_Open_Robot( char *fname );
+
+void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size );
+
+char * RW_Get_Robot_Name_From_File( RW_Robot_File *rf );
+
+RW_Hardware_Spec RW_Get_Hardware_From_File( RW_Robot_File *rf );
+
+/* Writing robot files */
+int RW_Write_Robot_File( FILE *fp, char *name, RW_Hardware_Spec hw,
+    RW_Robot_File_Entry *entry );
+
+RW_Robot_File_Entry * RW_Create_Robot_File_Entry( RW_Robot_File_Entry *entry,
+    char *name, size_t length, size_t size, void *data );
+
+void RW_Free_Robot_File_Entry( RW_Robot_File_Entry *entry );
 
 #endif

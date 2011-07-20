@@ -437,7 +437,7 @@ int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
 #define getr(r) get_reg(b, bot, r)
     if( bot->code_loc >= bot->robot->code_size ) {
         /* Reached/exceeded EOF, die */
-        report_error(b, bot, error_eof, 0);
+        report_error(b, bot, error_eof, bot->code_loc);
         suicide_bot(bot);
         return 1;
     }
@@ -550,7 +550,7 @@ int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
             }
         default:
             /* Unknown opcode */
-            report_error(b, bot, error_unknown_op, 0);
+            report_error(b, bot, error_unknown_op, opcode);
             suicide_bot(bot);
             return 1;
         case op_two_reg:

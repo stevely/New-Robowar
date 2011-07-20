@@ -136,7 +136,7 @@ static int handle_error( RW_Active_Robot* bot, enum RW_Error e, int val ) {
     fprintf(stdout, "Bot %d: ", bot->id);
     switch( e ) {
         case error_eof:
-            fprintf(stdout, "Error: End of file reached!\n");
+            fprintf(stdout, "Error: End of file reached! %d\n", val);
             break;
         case error_stack_uf:
             fprintf(stdout, "Error: Stack underflow!\n");
@@ -151,7 +151,7 @@ static int handle_error( RW_Active_Robot* bot, enum RW_Error e, int val ) {
             fprintf(stdout, "Error: Vector access out of range!\n");
             break;
         case error_unknown_op:
-            fprintf(stdout, "Error: Unknown instruction!\n");
+            fprintf(stdout, "Error: Unknown instruction! %d\n", val);
             break;
         case error_debug:
             fprintf(stdout, "DEBUG: %d\n", val);

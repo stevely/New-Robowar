@@ -16,6 +16,7 @@ typedef struct {
     size_t code_size;
     RW_Hardware_Spec hardware;
     unsigned int score;
+    char *name;
     RW_Robo_Op *code;
 } RW_Robot;
 

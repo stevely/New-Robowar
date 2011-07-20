@@ -13,34 +13,22 @@ static RW_Robot_List *bots = NULL;
 static unsigned int bot_count = 0;
 
 RW_Robot * RW_Read_Robot( char *fname ) {
-    FILE *fp;
-    RW_Robo_Op *code;
-    unsigned int code_size;
-    int c;
+    size_t code_size;
     RW_Robot_List *new_entry, *rl;
     RW_Robot *new_bot;
-    RW_Robot_File rf;
-    /* Step 1: Grab data from file */
-    fp = fopen(fname, "rb");
-    if( !fp ) {
+    RW_Robot_File *rf;
+    /* Step 1: Open file */
+    rf = RW_Open_Robot(fname);
+    if( rf == NULL ) {
         return NULL;
     }
-    fread(&rf, sizeof(RW_Robot_File), 1, fp);
-    fread(&code_size, sizeof(unsigned int), 1, fp);
-    while((c = fgetc(fp)) != 0 && c != EOF);
-    code = (RW_Robo_Op*)malloc(sizeof(RW_Robo_Op) * code_size);
-    fread(code, sizeof(RW_Robo_Op), code_size, fp);
-    fclose(fp);
-    if( !code ) {
-        return NULL;
-    }
-    /* Step 2: Move data to new robot entry */
+    /* Step 2: Set up new robot entry */
     new_entry = (RW_Robot_List*)malloc(sizeof(RW_Robot_List));
     new_bot = (RW_Robot*)malloc(sizeof(RW_Robot));
-    new_bot->code_size = code_size;
-    new_bot->hardware = rf.hardware;
+    new_bot->hardware = RW_Get_Hardware_From_File(rf);
     new_bot->score = 0;
-    new_bot->code = code;
+    new_bot->code = (RW_Robo_Op*)RW_Get_Resource(rf, RW_CODE_ENTRY, &code_size);
+    new_bot->code_size = (unsigned int)code_size;
     new_entry->bot = new_bot;
     new_entry->next = NULL;
     /* Step 3: Insert new robot into robot list */

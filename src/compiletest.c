@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "robocode.h"
+#include "robotfile.h"
 #include "robocompiler.h"
 
 void print_code_3reg( int opcode, int reg1, int reg2, int reg3 ) {
@@ -97,6 +98,8 @@ void print_code_1reg( int opcode, int reg1 ) {
             printf("random %d\n", reg1); break;
         case op_print:
             printf("print %d\n", reg1); break;
+        case op_debug:
+            printf("debug %d\n", reg1); break;
         default:
             break;
     }
@@ -106,8 +109,6 @@ void print_code_0reg( int opcode ) {
     switch( opcode ) {
         case op_beep:
             printf("beep\n"); break;
-        case op_debug:
-            printf("debug\n"); break;
         case op_drop:
             printf("drop\n"); break;
         case op_dropall:
@@ -149,7 +150,7 @@ void print_code_immed( int opcode, int imme ) {
     }
 }
 
-void decode_and_print_code( robo_op *code, size_t length ) {
+void decode_and_print_code( RW_Robo_Op *code, size_t length ) {
     size_t i;
     int opcode, reg1, reg2, reg3, imme;
     printf("Generated code:\n");
@@ -205,7 +206,7 @@ void decode_and_print_code( robo_op *code, size_t length ) {
 }
 
 void test_instr_encoding() {
-    robo_op op;
+    RW_Robo_Op op;
     int opcode, reg1, reg2, reg3, imme;
     encode_op_regs(op, op_add, 1, 2, 3);
     decode_op(op, opcode, reg1, reg2, reg3, imme);
@@ -225,7 +226,8 @@ void test_instr_encoding() {
 
 int main( int argc, char **argv ) {
     FILE *fp;
-    robo_op *code;
+    RW_Robo_Op *code;
+    RW_Robot_File *rf;
     size_t code_size;
     int err_l;
     test_instr_encoding();
@@ -233,21 +235,18 @@ int main( int argc, char **argv ) {
         fprintf(stdout, "Usage, %s file\n", argv[0]);
         return 0;
     }
-    fp = fopen(argv[1], "r");
-    code = compile_robot_f(fp, &code_size);
+    rf = RW_Open_Robot(argv[1]);
+    if( !rf ) {
+        fprintf(stdout, "Failed to open robot file!\n");
+        return 0;
+    }
+    code = RW_Get_Resource(rf, RW_CODE_ENTRY, &code_size);
     if( code ) {
         fprintf(stdout, "Robot successfully compiled!\n");
         decode_and_print_code(code, code_size);
     }
     else {
-        fprintf(stdout, "Error: ");
-        fprintf(stdout, "%s", get_compiler_error(&err_l));
-        if( err_l != -1 ) {
-            fprintf(stdout, ". Line number: %d\n", err_l);
-        }
-        else {
-            fprintf(stdout, ".\n");
-        }
+        fprintf(stdout, "Error reading code!\n");
     }
     return 0;
 }
