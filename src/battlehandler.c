@@ -13,7 +13,7 @@ static RW_Robot_List *bots = NULL;
 static unsigned int bot_count = 0;
 
 RW_Robot * RW_Read_Robot( char *fname ) {
-    size_t code_size;
+    size_t size;
     RW_Robot_List *new_entry, *rl;
     RW_Robot *new_bot;
     RW_Robot_File *rf;
@@ -27,10 +27,12 @@ RW_Robot * RW_Read_Robot( char *fname ) {
     new_bot = (RW_Robot*)malloc(sizeof(RW_Robot));
     new_bot->hardware = RW_Get_Hardware_From_File(rf);
     new_bot->score = 0;
-    new_bot->code = (RW_Robo_Op*)RW_Get_Resource(rf, RW_CODE_ENTRY, &code_size);
-    new_bot->code_size = (unsigned int)code_size;
+    new_bot->code = (RW_Robo_Op*)RW_Get_Resource_Copy(rf, RW_CODE_ENTRY, NULL, &size);
+    new_bot->code_size = (unsigned int)size;
+    new_bot->name = RW_Get_Robot_Name_From_File_Copy(rf);
     new_entry->bot = new_bot;
     new_entry->next = NULL;
+    RW_Free_Robot_File(rf);
     /* Step 3: Insert new robot into robot list */
     if( bots == NULL ) {
         bots = new_entry;
@@ -191,6 +193,15 @@ RW_Battle * RW_New_Battle() {
     b->shots.bores = NULL;
     b->err_fn = NULL;
     return b;
+}
+
+void RW_Free_Battle( RW_Battle *b ) {
+    if( b == NULL ) {
+        return;
+    }
+    RW_Free_Shot_State(b->shots);
+    RW_Free_Event_Queue(b->queue);
+    free(b);
 }
 
 void RW_Set_Error_Callback( RW_Battle *b, int (*fn)(RW_Active_Robot*, enum RW_Error, int val) ) {

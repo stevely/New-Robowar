@@ -64,11 +64,18 @@ typedef struct RW_Robot_File_Entry {
 /* Reading robot files */
 RW_Robot_File * RW_Open_Robot( char *fname );
 
-void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size );
+void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size, size_t *length );
+
+void * RW_Get_Resource_Copy( RW_Robot_File *rf, char *key, size_t *size,
+    size_t *length );
 
 char * RW_Get_Robot_Name_From_File( RW_Robot_File *rf );
 
+char * RW_Get_Robot_Name_From_File_Copy( RW_Robot_File *rf );
+
 RW_Hardware_Spec RW_Get_Hardware_From_File( RW_Robot_File *rf );
+
+void RW_Free_Robot_File( RW_Robot_File *rf );
 
 /* Writing robot files */
 int RW_Write_Robot_File( FILE *fp, char *name, RW_Hardware_Spec hw,

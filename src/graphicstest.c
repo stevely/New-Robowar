@@ -223,8 +223,7 @@ int main( int argc, char **argv ) {
                 keyflag = !keyflag;
             }
             else if( event.type == SDL_QUIT ) {
-                SDL_Quit();
-                return 0;
+                goto postbattle;
             }
         }
         display(b);
@@ -234,6 +233,8 @@ int main( int argc, char **argv ) {
     while( (bot = RW_Robot_Next_Raw(&ri)) ) {
         fprintf(stdout, "%d: %d points\n", bot->id, b->score[bot->id]);
     }
+    postbattle:
+    RW_Free_Battle(b);
     SDL_Quit();
     return 0;
 }

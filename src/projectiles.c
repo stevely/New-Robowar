@@ -269,3 +269,23 @@ RW_Shot * RW_Shot_Next( RW_Shot_Iter *si ) {
         return RW_Shot_Next(si);
     }
 }
+
+static void free_shot_buffer( RW_Shot_Buffer *b ) {
+    if( b == NULL ) {
+        return;
+    }
+    if( b->next ) {
+        free_shot_buffer(b->next);
+    }
+    free(b->buf);
+    free(b);
+}
+
+void RW_Free_Shot_State( RW_Shot_State s ) {
+    if( s.shots ) {
+        free_shot_buffer(s.shots);
+    }
+    if( s.bores ) {
+        free_shot_buffer(s.bores);
+    }
+}

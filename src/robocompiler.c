@@ -589,7 +589,7 @@ static void create_instruction( RW_Robo_Op instruction ) {
     list->length++;
 }
 
-static void update_branch_instruction( label_loc_map *map, int location ) {
+static label_loc_map * update_branch_instruction( label_loc_map *map, int location ) {
     op_list *list;
     int op_loc;
     label_loc_map *other_map;
@@ -603,6 +603,7 @@ static void update_branch_instruction( label_loc_map *map, int location ) {
     /* Remove the branch from the update list */
     if( map == fmap ) {
         fmap = fmap->prev;
+        other_map = fmap;
     }
     else {
         /* Find map entry right before this one */
@@ -611,8 +612,10 @@ static void update_branch_instruction( label_loc_map *map, int location ) {
             other_map = other_map->prev;
         }
         other_map->prev = map->prev;
+        other_map = other_map->prev;
     }
     free(map);
+    return other_map;
 }
 
 static void create_mova( int value ) {
@@ -994,9 +997,11 @@ static token_list * create_label( token_list *t ) {
     while( map ) {
         if( ident_compare(map->name, new_entry->name) ) {
             /* Found a match, update with correct location */
-            update_branch_instruction(map, new_entry->location);
+            map = update_branch_instruction(map, new_entry->location);
         }
-        map = map->prev;
+        else {
+            map = map->prev;
+        }
     }
     /* Eat a colon */
     tok = tok->next;

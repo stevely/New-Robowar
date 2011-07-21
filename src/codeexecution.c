@@ -58,6 +58,19 @@ static int get_energy_used( RW_Active_Robot *bot, int value ) {
     }
 }
 
+void RW_Free_Event_Queue( RW_Event_Queue *q ) {
+    if( q == NULL ) {
+        return;
+    }
+    if( q->next ) {
+        RW_Free_Event_Queue( q->next );
+    }
+    if( q->buf ) {
+        free(q->buf);
+    }
+    free(q);
+}
+
 void RW_Handle_Events( RW_Battle *b ) {
     RW_Event_Queue *s;
     int i, x, y;

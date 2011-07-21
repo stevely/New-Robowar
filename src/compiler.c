@@ -43,6 +43,7 @@ void write_out_bot( const char *fname, RW_Robo_Op *code, size_t code_size ) {
         /* Cleanup */
         RW_Free_Robot_File_Entry(e);
         free(n);
+        free(code);
         fclose(fp);
     }
 }

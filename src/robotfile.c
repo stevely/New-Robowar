@@ -4,6 +4,7 @@
  * By Steven Smith
  */
 
+#include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -192,7 +193,7 @@ RW_Robot_File * RW_Open_Robot( char *fname ) {
     return f;
 }
 
-void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size ) {
+void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size, size_t *length ) {
     char *k, *n;
     RW_Robot_Index_List *l;
     if( rf == NULL || key == NULL ) {
@@ -209,8 +210,11 @@ void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size ) {
         }
         if( *n == *k ) {
             /* Found it */
+            if( length ) {
+                *length = (size_t)l->i.length;
+            }
             if( size ) {
-                *size = (size_t)l->i.length;
+                *size = (size_t)l->i.size;
             }
             return l->i.data;
         }
@@ -219,11 +223,48 @@ void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size ) {
     return NULL;
 }
 
+void * RW_Get_Resource_Copy( RW_Robot_File *rf, char *key, size_t *size,
+    size_t *length ) {
+    void *old, *new;
+    /* Need our own size/length variables for malloc because the passed-in ones
+       might be null. */
+    size_t s, l;
+    old = RW_Get_Resource(rf, key, &s, &l);
+    new = malloc(s * l);
+    memcpy(new, old, s * l);
+    if( size ) {
+        *size = s;
+    }
+    if( length ) {
+        *length = l;
+    }
+    return new;
+}
+
 char * RW_Get_Robot_Name_From_File( RW_Robot_File *rf ) {
     if( rf == NULL ) {
         return NULL;
     }
     return rf->hdr->name;
+}
+
+char * RW_Get_Robot_Name_From_File_Copy( RW_Robot_File *rf ) {
+    char *n, *name;
+    int i = 1;
+    if( rf == NULL ) {
+        return NULL;
+    }
+    n = rf->hdr->name;
+    name = rf->hdr->name;
+    while( *n ) {
+        i++;
+        n++;
+    }
+    n = (char*)malloc(sizeof(char) * i);
+    for( ; i > 0; i-- ) {
+        n[i-1] = name[i-1];
+    }
+    return n;
 }
 
 RW_Hardware_Spec RW_Get_Hardware_From_File( RW_Robot_File *rf ) {
@@ -234,6 +275,34 @@ RW_Hardware_Spec RW_Get_Hardware_From_File( RW_Robot_File *rf ) {
     else {
         return s;
     }
+}
+
+void RW_Free_Robot_File( RW_Robot_File *rf ) {
+    RW_Robot_Index_List *ril;
+    if( rf == NULL ) {
+        return;
+    }
+    /* Step 1: Free the header */
+    if( rf->hdr ) {
+        if( rf->hdr->name ) {
+            free(rf->hdr->name);
+        }
+        free(rf->hdr);
+    }
+    /* Step 2: Free the index */
+    while( rf->idx ) {
+        ril = rf->idx;
+        rf->idx = ril->next;
+        if( ril->i.name ) {
+            free(ril->i.name);
+        }
+        if( ril->i.data ) {
+            free(ril->i.data);
+        }
+        free(ril);
+    }
+    /* Step 3: Free the robot file */
+    free(rf);
 }
 
 int RW_Write_Robot_File( FILE *fp, char *name, RW_Hardware_Spec hw,
