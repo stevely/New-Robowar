@@ -173,6 +173,14 @@ void RW_Setup_Battle( RW_Battle *b, RW_Robot **bots, size_t count ) {
             b->hitmatrix[i][j] = 0;
         }
     }
+    /* Already have an event queue? Gotta clear it */
+    if( b->queue ) {
+        RW_Reset_Event_Queue(b);
+    }
+    /* Gotta clear our shots queues too if they exist */
+    if( b->shots.shots || b->shots.bores ) {
+        RW_Reset_Shot_Buffer(b);
+    }
     b->bot_count = count;
     b->chronon = 0;
 }

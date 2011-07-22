@@ -198,9 +198,13 @@ RW_Shot * RW_Shot_Next( RW_Shot_Iter *si );
 
 void RW_Free_Shot_State( RW_Shot_State s );
 
+void RW_Reset_Shot_Buffer( RW_Battle *b );
+
 /* codeexecution.c code */
 
 void RW_Free_Event_Queue( RW_Event_Queue *q );
+
+void RW_Reset_Event_Queue( RW_Battle *b );
 
 void RW_Handle_Events( RW_Battle *b );
 

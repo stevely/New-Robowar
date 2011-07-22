@@ -289,3 +289,37 @@ void RW_Free_Shot_State( RW_Shot_State s ) {
         free_shot_buffer(s.bores);
     }
 }
+
+void RW_Reset_Shot_Buffer( RW_Battle *b ) {
+    RW_Shot_Buffer *buf;
+    unsigned int i;
+    if( b == NULL ) {
+        return;
+    }
+    if( b->shots.shots ) {
+        /* If we have multiple buffers we need to get rid of them */
+        buf = b->shots.shots;
+        while( buf->next ) {
+            b->shots.shots = buf->next;
+            free(buf);
+            buf = b->shots.shots;
+        }
+        /* Deactivate any latent shots by clearing their active flag */
+        for( i = 0; i < buf->length; i++ ) {
+            buf->buf[i].active = 0;
+        }
+    }
+    if( b->shots.bores ) {
+        /* Remove extra buffers */
+        buf = b->shots.bores;
+        while( buf->next ) {
+            b->shots.bores = buf->next;
+            free(buf);
+            buf = b->shots.bores;
+        }
+        /* Clear active flag */
+        for( i = 0; i < buf->length; i++ ) {
+            buf->buf[i].active = 0;
+        }
+    }
+}

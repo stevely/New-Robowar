@@ -71,6 +71,22 @@ void RW_Free_Event_Queue( RW_Event_Queue *q ) {
     free(q);
 }
 
+void RW_Reset_Event_Queue( RW_Battle *b ) {
+    RW_Event_Queue *q;
+    if( b == NULL || b->queue == NULL ) {
+        return;
+    }
+    /* If we have multiple queues we need to get rid of them */
+    q = b->queue;
+    while( q->next ) {
+        b->queue = q->next;
+        free(q);
+        q = b->queue;
+    }
+    /* Set the queue location to zero and the old values will be ignored */
+    q->loc = 0;
+}
+
 void RW_Handle_Events( RW_Battle *b ) {
     RW_Event_Queue *s;
     int i, x, y;
