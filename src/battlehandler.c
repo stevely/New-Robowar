@@ -26,7 +26,8 @@ RW_Robot * RW_Read_Robot( char *fname ) {
     new_entry = (RW_Robot_List*)malloc(sizeof(RW_Robot_List));
     new_bot = (RW_Robot*)malloc(sizeof(RW_Robot));
     new_bot->hardware = RW_Get_Hardware_From_File(rf);
-    new_bot->score = 0;
+    new_bot->duel_score = 0;
+    new_bot->group_score = 0;
     new_bot->code = (RW_Robo_Op*)RW_Get_Resource_Copy(rf, RW_CODE_ENTRY, NULL, &size);
     new_bot->code_size = (unsigned int)size;
     new_bot->name = RW_Get_Robot_Name_From_File_Copy(rf);
@@ -52,9 +53,24 @@ void RW_Reset_Scores() {
     RW_Robot_List *bot;
     bot = bots;
     while( bot ) {
-        bot->bot->score = 0;
+        bot->bot->duel_score = 0;
+        bot->bot->group_score = 0;
         bot = bot->next;
     }
+}
+
+void RW_Update_Duel_Score( RW_Active_Robot *bot ) {
+    if( bot == NULL || bot->robot == NULL ) {
+        return;
+    }
+    bot->robot->duel_score += bot->score;
+}
+
+void RW_Update_Group_Score( RW_Active_Robot *bot ) {
+    if( bot == NULL || bot->robot == NULL ) {
+        return;
+    }
+    bot->robot->group_score += bot->score;
 }
 
 static int valid_placement( RW_Battle *b, int i ) {
@@ -147,11 +163,14 @@ static void reset_robot( RW_Active_Robot *bot ) {
 
 void RW_Setup_Battle( RW_Battle *b, RW_Robot **bots, size_t count ) {
     size_t i, j;
+    if( count > 6 ) {
+        count = 6;
+    }
     /* Reset scores, reset bots, place bots, and count bots */
     for( i = 0; i < count; i++ ) {
         b->bots[i].robot = bots[i];
         /* Reset scores */
-        b->score[i] = 0;
+        b->bots[i].score = 0;
         /* Reset bot */
         reset_robot(&(b->bots[i]));
         b->bots[i].id = i;
@@ -258,6 +277,10 @@ int RW_Alive_Robots( RW_Battle *b ) {
     return count;
 }
 
+char * RW_Get_Robot_Name( RW_Active_Robot *bot ) {
+    return bot->robot->name;
+}
+
 int RW_Run_Chronon( RW_Battle *b ) {
     int i, j, x, y, radius, instruction_count;
     RW_Shot *shot;
@@ -285,11 +308,11 @@ int RW_Run_Chronon( RW_Battle *b ) {
                 while( (bot2 = RW_Robot_Next(i2)) ) {
                     /* Out-living point */
                     if( bot2->damage > 0 ) {
-                        b->score[bot2->id]++;
+                        bot2->score++;
                     }
                     /* Kill point */
                     if( b->hitmatrix[bot1->id][bot2->id] ) {
-                        b->score[bot2->id]++;
+                        bot2->score++;
                         bot2->regs[reg_kills]++;
                     }
                 }
@@ -391,7 +414,7 @@ int RW_Run_Chronon( RW_Battle *b ) {
         while( (bot1 = RW_Robot_Next(i1)) ) {
             if( bot1->damage > 0 ) {
                 /* Point for surviving the round */
-                b->score[bot1->id]++;
+                bot1->score++;
             }
         }
         return 0;

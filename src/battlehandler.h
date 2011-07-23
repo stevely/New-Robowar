@@ -15,7 +15,8 @@
 typedef struct {
     size_t code_size;
     RW_Hardware_Spec hardware;
-    unsigned int score;
+    unsigned int duel_score;
+    unsigned int group_score;
     char *name;
     RW_Robo_Op *code;
 } RW_Robot;
@@ -34,6 +35,7 @@ typedef struct {
     int shield;
     int shield_cap;
     unsigned int id;
+    unsigned int score;
     int regs[512];
     int active;
     int stunned;
@@ -129,7 +131,6 @@ typedef struct RW_Event_Queue {
 
 typedef struct {
     RW_Active_Robot bots[6];
-    unsigned int score[6];
     unsigned int bot_count;
     unsigned int chronon;
     int hitmatrix[6][6];
@@ -162,6 +163,10 @@ RW_Robot * RW_Read_Robot( char *fname );
 
 void RW_Reset_Scores();
 
+void RW_Update_Duel_Score( RW_Active_Robot *bot );
+
+void RW_Update_Group_Score( RW_Active_Robot *bot );
+
 void RW_Setup_Battle( RW_Battle *b, RW_Robot **bots, size_t count );
 
 void RW_Setup_Duel( RW_Battle *b, RW_Robot *b1, RW_Robot *b2 );
@@ -179,6 +184,8 @@ RW_Active_Robot * RW_Robot_Next( RW_Robot_Iter *i );
 RW_Active_Robot * RW_Robot_Next_Raw( RW_Robot_Iter *i );
 
 int RW_Alive_Robots( RW_Battle *b );
+
+char * RW_Get_Robot_Name( RW_Active_Robot *bot );
 
 int RW_Run_Chronon( RW_Battle *b );
 

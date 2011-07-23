@@ -232,14 +232,14 @@ int main( int argc, char **argv ) {
         fprintf(stdout, "Result of battle %d after %d chronons:\n", i+1, b->chronon);
         RW_Reset_Robot_Iter(b, &ri, NULL);
         while( (bot = RW_Robot_Next_Raw(&ri)) ) {
-            fprintf(stdout, "%s: %d points\n", bot->robot->name, b->score[bot->id]);
-            bot->robot->score += b->score[bot->id];
+            fprintf(stdout, "%s: %d points\n", RW_Get_Robot_Name(bot), bot->score);
+            RW_Update_Duel_Score(bot);
         }
     }
     postbattle:
     fprintf(stdout, "Score totals:\n");
     for( i = 0; i < bot_count; i++ ) {
-        fprintf(stdout, "%s: %d points\n", bots[i]->name, bots[i]->score);
+        fprintf(stdout, "%s: %d points\n", bots[i]->name, bots[i]->duel_score);
     }
     RW_Free_Battle(b);
     SDL_Quit();
