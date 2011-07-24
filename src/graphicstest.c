@@ -22,6 +22,8 @@ static SDL_Surface *stunner;
 static SDL_Surface *hellbore;
 static TTF_Font *font;
 static int bot_count = 0;
+static int fps = 32;
+static int keyflag = 0;
 
 static void load_texture( const char *fname, SDL_Surface **sp ) {
     SDL_Surface *image;
@@ -45,6 +47,11 @@ static SDL_Surface * load_text( int val ) {
     char text[10];
     sprintf(text, "%d", val);
     return TTF_RenderText_Blended(font, text, color);
+}
+
+static SDL_Surface * load_name( char *name ) {
+    SDL_Color color = {0, 0, 0, 0};
+    return TTF_RenderText_Blended(font, name, color);
 }
 
 static void draw_text( SDL_Surface *text, int x, int y) {
@@ -78,12 +85,14 @@ static void display_scores( RW_Battle *b ) {
     SDL_FillRect(screen, &r, 0x88888888);
     RW_Reset_Robot_Iter(b, &ri, NULL);
     while( (bot = RW_Robot_Next(&ri)) ) {
+        text = load_name(RW_Get_Robot_Name(bot));
+        draw_text(text, 303, 3 + (bot->id * 28));
         text = load_text(bot->damage);
-        draw_text(text, 303, 3 + (bot->id * 14));
+        draw_text(text, 303, 3 + 14 + (bot->id * 28));
         text = load_text(bot->energy);
-        draw_text(text, 338, 3 + (bot->id * 14));
+        draw_text(text, 338, 3 + 14 + (bot->id * 28));
         text = load_text(bot->shield);
-        draw_text(text, 373, 3 + (bot->id * 14));
+        draw_text(text, 373, 3 + 14 + (bot->id * 28));
     }
 }
 
@@ -160,18 +169,57 @@ static int handle_error( RW_Active_Robot* bot, enum RW_Error e, int val ) {
     return 0;
 }
 
-int main( int argc, char **argv ) {
-    int fps, keyflag, i;
-    RW_Battle *b;
-    RW_Robot *bots[6];
+int run_chronon( RW_Battle *b ) {
+    SDL_Event event;
+    SDL_Delay(1000 / fps); /* 30 FPS */
+    while( SDL_PollEvent(&event) ) {
+        if( event.type == SDL_KEYDOWN && !keyflag ) {
+            keyflag = !keyflag;
+            switch(event.key.keysym.sym) {
+                case SDLK_q:
+                    return 1;
+                case SDLK_LEFT:
+                    fps /= 2;
+                    break;
+                case SDLK_RIGHT:
+                    fps *= 2;
+                    break;
+                default:
+                    break;
+            }
+        }
+        else if( event.type == SDL_KEYUP && keyflag ) {
+            keyflag = !keyflag;
+        }
+        else if( event.type == SDL_QUIT ) {
+            return 1;
+        }
+    }
+    display(b);
+    return 0;
+}
+
+void after_fight( RW_Battle *b ) {
     RW_Active_Robot *bot;
     RW_Robot_Iter ri;
-    SDL_Event event;
+    fprintf(stdout, "Result of battle after %d chronons:\n", b->chronon);
+    RW_Reset_Robot_Iter(b, &ri, NULL);
+    while( (bot = RW_Robot_Next_Raw(&ri)) ) {
+        fprintf(stdout, "%s: %d points\n", RW_Get_Robot_Name(bot), bot->score);
+    }
+}
+
+int main( int argc, char **argv ) {
+    int i;
+    RW_Battle *b;
+    RW_Robot **bots;
     if( argc < 2 ) {
         fprintf(stdout, "Usage: %s robot [robot]+\n", argv[0]);
         return 0;
     }
-    for( i = 1; i < argc && bot_count < 6; i++ ) {
+    bots = (RW_Robot**)malloc(sizeof(RW_Robot*) * (argc - 1));
+    for( i = 1; i < argc; i++ ) {
+        bots[i-1] = (RW_Robot*)malloc(sizeof(RW_Robot));
         bots[i-1] = RW_Read_Robot(argv[i]);
         bot_count++;
     }
@@ -197,49 +245,12 @@ int main( int argc, char **argv ) {
     load_texture("stunner.png", &stunner);
     load_texture("hellbore.png", &hellbore);
     font = TTF_OpenFont("/System/Library/Fonts/HelveticaLight.ttf", 12);
-    fps = 32;
-    keyflag = 0;
-    for( i = 0; i < 3; i++ ) {
-        RW_Setup_Battle(b, bots, bot_count);
-        while( RW_Run_Chronon(b) ) {
-            SDL_Delay(1000 / fps); /* 30 FPS */
-            while( SDL_PollEvent(&event) ) {
-                if( event.type == SDL_KEYDOWN && !keyflag ) {
-                    keyflag = !keyflag;
-                    switch(event.key.keysym.sym) {
-                        case SDLK_q:
-                            SDL_Quit();
-                            return 0;
-                        case SDLK_LEFT:
-                            fps /= 2;
-                            break;
-                        case SDLK_RIGHT:
-                            fps *= 2;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                else if( event.type == SDL_KEYUP && keyflag ) {
-                    keyflag = !keyflag;
-                }
-                else if( event.type == SDL_QUIT ) {
-                    goto postbattle;
-                }
-            }
-            display(b);
-        }
-        fprintf(stdout, "Result of battle %d after %d chronons:\n", i+1, b->chronon);
-        RW_Reset_Robot_Iter(b, &ri, NULL);
-        while( (bot = RW_Robot_Next_Raw(&ri)) ) {
-            fprintf(stdout, "%s: %d points\n", RW_Get_Robot_Name(bot), bot->score);
-            RW_Update_Duel_Score(bot);
-        }
-    }
-    postbattle:
+    RW_Run_Duels(bots, bot_count, 1, b, run_chronon, after_fight);
+    RW_Run_Groups(bots, bot_count, 1, b, run_chronon, after_fight);
     fprintf(stdout, "Score totals:\n");
     for( i = 0; i < bot_count; i++ ) {
-        fprintf(stdout, "%s: %d points\n", bots[i]->name, bots[i]->duel_score);
+        fprintf(stdout, "%s: %d / %d points\n", bots[i]->name, bots[i]->duel_score,
+            bots[i]->group_score);
     }
     RW_Free_Battle(b);
     SDL_Quit();

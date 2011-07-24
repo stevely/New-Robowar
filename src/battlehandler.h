@@ -136,7 +136,7 @@ typedef struct {
     int hitmatrix[6][6];
     RW_Shot_State shots;
     RW_Event_Queue *queue;
-    int (*err_fn)(RW_Active_Robot*, enum RW_Error, int val);
+    int (*err_fn)(RW_Active_Robot*, enum RW_Error, int);
 } RW_Battle;
 
 /* Robot iterator */
@@ -216,5 +216,13 @@ void RW_Reset_Event_Queue( RW_Battle *b );
 void RW_Handle_Events( RW_Battle *b );
 
 int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot );
+
+/* tournament.c code */
+
+void RW_Run_Duels( RW_Robot **bots, int bot_count, int rounds, RW_Battle *b,
+    int (*each_chronon)(RW_Battle*), void (*after_battle)(RW_Battle*) );
+
+void RW_Run_Groups( RW_Robot **bots, int bot_count, int rounds, RW_Battle *b,
+    int (*each_chronon)(RW_Battle*), void (*after_battle)(RW_Battle*) );
 
 #endif
