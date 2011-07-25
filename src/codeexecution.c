@@ -633,10 +633,25 @@ int RW_Run_Code( RW_Battle *b, RW_Active_Robot *bot ) {
                     return RW_Run_Code(b, bot); /* Op doesn't use CPU time */
                 case op_icon:
                 case op_sound:
-                case op_roll:
                 case op_random:
                 case op_print:
                     /* TODO */
+                    break;
+                case op_roll:
+                    reg1_val = getr(reg1);
+                    if( bot->stack_loc < reg1_val ) {
+                        /* Stack underflow */
+                        report_error(b, bot, error_stack_uf, 0);
+                        suicide_bot(bot);
+                        return 1;
+                    }
+                    /* May as well use the temps already available */
+                    reg2_val = bot->stack_loc - reg1_val;
+                    for( reg3_val = bot->stack_loc; reg3_val > reg2_val; reg3_val++ ) {
+                        reg1_val = bot->stack[reg3_val];
+                        bot->stack[reg3_val] = bot->stack[reg3_val-1];
+                        bot->stack[reg3_val-1] = reg1_val;
+                    }
                     break;
                 case op_peek:
                     if( bot->stack_loc < 0 ) {

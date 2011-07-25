@@ -1,7 +1,7 @@
 # Makefile for development version of NewRobowar
 
 CC= clang
-CFLAGS= -g -W -Wall -Werror
+CFLAGS= -g -W -Wall -Werror -O3
 LIBS=
 
 # Build target directory
@@ -9,7 +9,7 @@ DEST=../bin
 
 # Compiler
 RW_C= robocompiler
-RW_C_S= compiler.c robocompiler.c robotfile.c
+RW_C_S= compiler.c robocompiler.c robotfile.c roboconfig.c
 RW_C_N= compiler
 
 # Battle sources

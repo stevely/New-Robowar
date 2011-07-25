@@ -92,6 +92,30 @@ static token_list *tl_end = NULL;
 #define IDENTBUF_SIZE 50
 static char ident_buf[IDENTBUF_SIZE + 1];
 
+#define CHARBUF_SIZE 256
+static char charbuf[CHARBUF_SIZE];
+static int charbuf_pos = CHARBUF_SIZE;
+static int charbuf_end = CHARBUF_SIZE;
+
+static int get_next_char( FILE *fp ) {
+    int i;
+    if( charbuf_pos >= CHARBUF_SIZE ) {
+        /* Out of buffer space, time to refill it */
+        i = fread(charbuf, sizeof(char), CHARBUF_SIZE, fp);
+        if( i != CHARBUF_SIZE ) {
+            /* Hit an error/EOF */
+            charbuf_end = i;
+        }
+        charbuf_pos = 0;
+    }
+    if( charbuf_pos < charbuf_end ) {
+        return (int)charbuf[charbuf_pos++];
+    }
+    else {
+        return EOF;
+    }
+}
+
 #define isalpha(c) \
     ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
 #define isalphanum(c) \
@@ -179,7 +203,7 @@ static int build_token_list_f( FILE *fp ) {
     if( !fp ) {
         return -1;
     }
-    curr_char = fgetc(fp);
+    curr_char = get_next_char(fp);
     current_line = 1;
     while( curr_char != EOF ) {
         /* Ident builder */
@@ -188,7 +212,7 @@ static int build_token_list_f( FILE *fp ) {
             do {
                 ident_buf[ident_pos] = curr_char;
                 ident_pos++;
-                curr_char = fgetc(fp);
+                curr_char = get_next_char(fp);
             } while( curr_char != EOF && isalphanum(curr_char) && ident_pos < IDENTBUF_SIZE );
             build_token_ident(ident_pos, current_line);
             continue;
@@ -199,7 +223,7 @@ static int build_token_list_f( FILE *fp ) {
             do {
                 ident_buf[ident_pos] = curr_char;
                 ident_pos++;
-                curr_char = fgetc(fp);
+                curr_char = get_next_char(fp);
             } while( curr_char != EOF && isnum(curr_char)  && ident_pos < IDENTBUF_SIZE );
             build_token_num(ident_pos, current_line);
             continue;
@@ -216,13 +240,13 @@ static int build_token_list_f( FILE *fp ) {
         else if( curr_char == '#' ) {
             /* Eat everything until EOL */
             do {
-                curr_char = fgetc(fp);
+                curr_char = get_next_char(fp);
             } while( curr_char != EOF && curr_char != '\n' && curr_char != '\r' );
         }
         if( curr_char == '\n' ) {
             current_line++;
         }
-        curr_char = fgetc(fp);
+        curr_char = get_next_char(fp);
     }
     return 0;
 }
@@ -1286,3 +1310,9 @@ RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
     compiler_cleanup();
     return code;
 }
+
+/* Clean up defs */
+#undef IDENTBUF_SIZE
+#undef isalpha
+#undef isalphanum
+#undef isnum
