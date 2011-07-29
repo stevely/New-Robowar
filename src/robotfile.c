@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include "robotfile.h"
 
-static int check_magic( char *magic ) {
+int RW_Check_Magic( char *magic ) {
     char m[] = RW_MAGIC;
     int i;
     for( i = 0; i < 4; i++ ) {
@@ -151,7 +151,7 @@ RW_Robot_File * RW_Open_Robot( char *fname ) {
         return NULL;
     }
     fread(&(hdr->magic), sizeof(char), 4, fp);
-    if( !check_magic(hdr->magic) ) {
+    if( !RW_Check_Magic(hdr->magic) ) {
         free(hdr);
         fclose(fp);
         return NULL;
@@ -217,6 +217,9 @@ void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size, size_t *leng
                 *size = (size_t)l->i.size;
             }
             return l->i.data;
+        }
+        else {
+            l = l->next;
         }
     }
     /* Don't have it */

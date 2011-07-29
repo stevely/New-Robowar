@@ -13,6 +13,8 @@
 
 #define RW_MAGIC { 'R', 'O', 'B', 'O' }
 #define RW_CODE_ENTRY "robocode"
+#define RW_CODE_SOURCE "robosrc"
+#define RW_CONFIG_ENTRY "roboconfig"
 #define RW_VERSION 2
 
 typedef struct {
@@ -62,6 +64,8 @@ typedef struct RW_Robot_File_Entry {
 } RW_Robot_File_Entry;
 
 /* Reading robot files */
+int RW_Check_Magic( char *magic );
+
 RW_Robot_File * RW_Open_Robot( char *fname );
 
 void * RW_Get_Resource( RW_Robot_File *rf, char *key, size_t *size, size_t *length );

@@ -8,15 +8,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "robotfile.h"
+#include "roboconfig.h"
 
-typedef struct kv_list {
-    char *key;
-    char *value;
-    struct kv_list *next;
-} kv_list;
-
-static kv_list *kvl = NULL;
-static kv_list *kvl_end = NULL;
+static RW_Config_File *kvl = NULL;
+static RW_Config_File *kvl_end = NULL;
 
 #define IDENTBUF_SIZE 256
 static char kv_buf[IDENTBUF_SIZE + 1];
@@ -31,11 +26,11 @@ static char * copy_ident( int kv_pos ) {
     return c;
 }
 
-static int build_kv_list_f( FILE *fp ) {
+static int build_RW_Config_File_f( FILE *fp ) {
     int curr_char;
     int kv_pos;
     int current_line;
-    kv_list *k;
+    RW_Config_File *k;
     if( fp == NULL ) {
         return -1;
     }
@@ -56,7 +51,7 @@ static int build_kv_list_f( FILE *fp ) {
         }
         /* Create our key-value struct */
         kv_buf[kv_pos] = 0;
-        k = (kv_list*)malloc(sizeof(kv_list));
+        k = (RW_Config_File*)malloc(sizeof(RW_Config_File));
         k->next = NULL;
         k->key = copy_ident(kv_pos);
         /* Eat any whitespace between the key and the value */
@@ -91,13 +86,79 @@ static int build_kv_list_f( FILE *fp ) {
     return 0;
 }
 
-char * RW_Config_Lookup( char *key ) {
-    kv_list *k;
+static int build_RW_Config_File_s( char *s, size_t size ) {
+    int curr_char;
+    int kv_pos;
+    int current_line;
+    RW_Config_File *k;
+    size_t index;
+    if( s == NULL ) {
+        return -1;
+    }
+    index = 0;
+    curr_char = s[index];
+    current_line = 1;
+    while( index < size ) {
+        kv_pos = 0;
+        /* Grab key */
+        while( index < size && curr_char != ' ' && curr_char != '\n'
+            && kv_pos < IDENTBUF_SIZE ) {
+            kv_buf[kv_pos] = curr_char;
+            kv_pos++;
+            index++;
+            curr_char = s[index];
+        }
+        /* Make sure we grabbed something */
+        if( kv_pos == 0 || index > size || curr_char == '\n' ) {
+            return current_line;
+        }
+        /* Create our key-value struct */
+        kv_buf[kv_pos] = 0;
+        k = (RW_Config_File*)malloc(sizeof(RW_Config_File));
+        k->next = NULL;
+        k->key = copy_ident(kv_pos);
+        /* Eat any whitespace between the key and the value */
+        while( curr_char == ' ' ) {
+            index++;
+            curr_char = s[index];
+        }
+        kv_pos = 0;
+        if( index > size || curr_char == '\n' ) {
+            return current_line;
+        }
+        /* Grab value */
+        while( index < size && curr_char != '\n' && kv_pos < IDENTBUF_SIZE ) {
+            kv_buf[kv_pos] = curr_char;
+            kv_pos++;
+            index++;
+            curr_char = s[index];
+        }
+        /* Insert value into the key-value struct */
+        kv_buf[kv_pos] = 0;
+        k->value = copy_ident(kv_pos);
+        /* Insert our key-value struct into the global list */
+        if( kvl == NULL ) {
+            kvl = k;
+            kvl_end = k;
+        }
+        else {
+            kvl_end->next = k;
+            kvl_end = k;
+        }
+        current_line++;
+        index++;
+        curr_char = s[index];
+    }
+    return 0;
+}
+
+char * RW_Config_Lookup( RW_Config_File *cf, char *key ) {
+    RW_Config_File *k;
     char *c1, *c2;
-    if( key == NULL ) {
+    if( cf == NULL || key == NULL ) {
         return NULL;
     }
-    k = kvl;
+    k = cf;
     while( k ) {
         c1 = key;
         c2 = k->key;
@@ -117,35 +178,45 @@ char * RW_Config_Lookup( char *key ) {
     return NULL;
 }
 
-int RW_Read_Config_File_f( FILE *fp ) {
+int RW_Read_Config_File_f( FILE *fp, RW_Config_File *cf ) {
     int errline;
-    kv_list *k;
-    errline = build_kv_list_f(fp);
+    if( cf == NULL ) {
+        return -1;
+    }
+    errline = build_RW_Config_File_f(fp);
     if( errline ) {
         /* Parsing failed, free everything */
-        while( kvl ) {
-            k = kvl;
-            if( kvl->key ) {
-                free(kvl->key);
-            }
-            if( kvl->value ) {
-                free(kvl->value);
-            }
-            kvl = kvl->next;
-            free(k);
-        }
+        RW_Free_Config_File(kvl);
         return errline;
     }
     else {
+        *cf = *kvl;
         return 0;
     }
 }
 
-RW_Hardware_Spec RW_Get_HW_From_Config() {
+int RW_Read_Config_File_s( char *s, size_t size, RW_Config_File *cf ) {
+    int errline;
+    if( cf == NULL ) {
+        return -1;
+    }
+    errline = build_RW_Config_File_s(s, size);
+    if( errline ) {
+        /* Parsing failed, free everything */
+        RW_Free_Config_File(kvl);
+        return errline;
+    }
+    else {
+        *cf = *kvl;
+        return 0;
+    }
+}
+
+RW_Hardware_Spec RW_Get_HW_From_Config( RW_Config_File *cf ) {
     RW_Hardware_Spec hw;
     char *c;
     int i;
-    c = RW_Config_Lookup("energy");
+    c = RW_Config_Lookup(cf, "energy");
     if( c ) {
         i = atoi(c);
         if( i == 100 ) {
@@ -161,7 +232,7 @@ RW_Hardware_Spec RW_Get_HW_From_Config() {
     else {
         hw.energy = 0;
     }
-    c = RW_Config_Lookup("damage");
+    c = RW_Config_Lookup(cf, "damage");
     if( c ) {
         i = atoi(c);
         if( i == 300 ) {
@@ -177,7 +248,7 @@ RW_Hardware_Spec RW_Get_HW_From_Config() {
     else {
         hw.damage = 0;
     }
-    c = RW_Config_Lookup("shield");
+    c = RW_Config_Lookup(cf, "shield");
     if( c ) {
         i = atoi(c);
         if( i == 50 ) {
@@ -193,7 +264,7 @@ RW_Hardware_Spec RW_Get_HW_From_Config() {
     else {
         hw.shield = 0;
     }
-    c = RW_Config_Lookup("bullet");
+    c = RW_Config_Lookup(cf, "bullet");
     if( c ) {
         if( strcmp(c, "explosive") == 0 ) {
             hw.bullet = 2;
@@ -208,49 +279,49 @@ RW_Hardware_Spec RW_Get_HW_From_Config() {
     else {
         hw.bullet = 1;
     }
-    c = RW_Config_Lookup("probes");
+    c = RW_Config_Lookup(cf, "probes");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.probes = 1;
     }
     else {
         hw.probes = 0;
     }
-    c = RW_Config_Lookup("negenergy");
+    c = RW_Config_Lookup(cf, "negenergy");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.negenergy = 1;
     }
     else {
         hw.negenergy = 0;
     }
-    c = RW_Config_Lookup("hellbore");
+    c = RW_Config_Lookup(cf, "hellbore");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.hellbore = 1;
     }
     else {
         hw.hellbore = 0;
     }
-    c = RW_Config_Lookup("mine");
+    c = RW_Config_Lookup(cf, "mine");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.mine = 1;
     }
     else {
         hw.mine = 0;
     }
-    c = RW_Config_Lookup("missile");
+    c = RW_Config_Lookup(cf, "missile");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.missile = 1;
     }
     else {
         hw.missile = 0;
     }
-    c = RW_Config_Lookup("tacnuke");
+    c = RW_Config_Lookup(cf, "tacnuke");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.tacnuke = 1;
     }
     else {
         hw.tacnuke = 0;
     }
-    c = RW_Config_Lookup("tacnuke");
+    c = RW_Config_Lookup(cf, "tacnuke");
     if( c && strcmp(c, "yes") == 0 ) {
         hw.stunner = 1;
     }
@@ -258,4 +329,19 @@ RW_Hardware_Spec RW_Get_HW_From_Config() {
         hw.stunner = 0;
     }
     return hw;
+}
+
+void RW_Free_Config_File( RW_Config_File *cf ) {
+    RW_Config_File *k;
+    while( cf ) {
+        k = cf;
+        if( cf->key ) {
+            free(cf->key);
+        }
+        if( cf->value ) {
+            free(cf->value);
+        }
+        cf = cf->next;
+        free(k);
+    }
 }

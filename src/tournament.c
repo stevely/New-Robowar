@@ -54,11 +54,9 @@ void RW_Run_Groups( RW_Robot **bots, int bot_count, int rounds, RW_Battle *b,
     int i, j, k, count;
     int is[6] = {0, 1, 2, 3, 4, 5};
     RW_Robot *bs[6];
-    RW_Robot *first;
     if( bots == NULL || b == NULL ) {
         return;
     }
-    first = *bots;
     count = bot_count > 6 ? 6 : bot_count;
     /* Minimum 3 robots needed for group rounds */
     if( bot_count < 3 ) {

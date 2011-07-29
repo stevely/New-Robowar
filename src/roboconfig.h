@@ -9,10 +9,20 @@
 
 #include "robotfile.h"
 
-char * RW_Config_Lookup( char *key );
+typedef struct RW_Config_File {
+    char *key;
+    char *value;
+    struct RW_Config_File *next;
+} RW_Config_File;
 
-int RW_Read_Config_File_f( FILE *fp );
+char * RW_Config_Lookup( RW_Config_File *cf, char *key );
 
-RW_Hardware_Spec RW_Get_HW_From_Config();
+int RW_Read_Config_File_f( FILE *fp, RW_Config_File *cf );
+
+int RW_Read_Config_File_s( char *s, size_t size, RW_Config_File *cf );
+
+RW_Hardware_Spec RW_Get_HW_From_Config( RW_Config_File *cf );
+
+void RW_Free_Config_File( RW_Config_File *cf );
 
 #endif

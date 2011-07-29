@@ -251,6 +251,67 @@ static int build_token_list_f( FILE *fp ) {
     return 0;
 }
 
+static int build_token_list_s( char *s, size_t size ) {
+    char curr_char;
+    size_t index;
+    int ident_pos;
+    int current_line;
+    if( !s ) {
+        return -1;
+    }
+    index = 0;
+    curr_char = s[index];
+    current_line = 1;
+    while( index <= size ) {
+        /* Ident builder */
+        if( isalpha(curr_char) ) {
+            ident_pos = 0;
+            do {
+                ident_buf[ident_pos] = curr_char;
+                ident_pos++;
+                index++;
+                curr_char = s[index];
+            } while( index <= size && isalphanum(curr_char) && ident_pos < IDENTBUF_SIZE );
+            build_token_ident(ident_pos, current_line);
+            continue;
+        }
+        /* Number builder */
+        else if( isnum(curr_char) || curr_char == '-' ) {
+            ident_pos = 0;
+            do {
+                ident_buf[ident_pos] = curr_char;
+                ident_pos++;
+                index++;
+                curr_char = s[index];
+            } while( index <= size && isnum(curr_char)  && ident_pos < IDENTBUF_SIZE );
+            build_token_num(ident_pos, current_line);
+            continue;
+        }
+        /* Grab commas */
+        else if( curr_char == ',' ) {
+            build_token_comma(current_line);
+        }
+        /* Grab semicolons */
+        else if( curr_char == ':' ) {
+            build_token_colon(current_line);
+        }
+        /* Handle comments */
+        else if( curr_char == '#' ) {
+            /* Eat everything until EOL */
+            do {
+                index++;
+                curr_char = s[index];
+            } while( index <= size && curr_char != '\n' && curr_char != '\r' );
+        }
+        if( curr_char == '\n' ) {
+            current_line++;
+        }
+        index++;
+        curr_char = s[index];
+    }
+    return 0;
+}
+
 static int ident_compare( char *c1, char *c2 ) {
     int i = 0;
     if( c1 && c2 ) {
@@ -1262,23 +1323,21 @@ const char * RW_Get_Compiler_Error( int *line_number ) {
     }
 }
 
-RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
+static RW_Robo_Op * compile_robot( size_t *length ) {
     int l, i;
     op_list *ol;
     RW_Robo_Op *code = NULL;
-    if( build_token_list_f(fp) ) {
-        /* Error */
-        goto cleanup;
-    }
     convert_ident_tokens(); /* This phase can't fail, so no error checking */
     if( parse_token_list() ) {
         /* Error */
-        goto cleanup;
+        compiler_cleanup();
+        return NULL;
     }
     if( fmap ) {
         fprintf(stderr, "%s\n", fmap->name);
         error = err_nonexistant_label;
-        goto cleanup;
+        compiler_cleanup();
+        return NULL;
     }
     /* Convert tentative instruction list into simple array */
     /* Step 1: Find the total length and allocate memory */
@@ -1306,9 +1365,30 @@ RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
         ol = ol->next;
     }
     /* Step 3: Cleanup */
-    cleanup:
     compiler_cleanup();
     return code;
+}
+
+RW_Robo_Op * RW_Compile_Robot_f( FILE *fp, size_t *length ) {
+    if( build_token_list_f(fp) ) {
+        /* Error */
+        compiler_cleanup();
+        return NULL;
+    }
+    else {
+        return compile_robot(length);
+    }
+}
+
+RW_Robo_Op * RW_Compile_Robot_s( char *s, size_t size, size_t *length ) {
+    if( build_token_list_s(s, size) ) {
+        /* Error */
+        compiler_cleanup();
+        return NULL;
+    }
+    else {
+        return compile_robot(length);
+    }
 }
 
 /* Clean up defs */

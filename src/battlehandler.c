@@ -268,10 +268,9 @@ RW_Active_Robot * RW_Robot_Next_Raw( RW_Robot_Iter *i ) {
 int RW_Alive_Robots( RW_Battle *b ) {
     int count;
     RW_Robot_Iter i;
-    RW_Active_Robot *bot;
     count = 0;
     RW_Reset_Robot_Iter(b, &i, NULL);
-    while( (bot = RW_Robot_Next(&i)) ) {
+    while( RW_Robot_Next(&i) ) {
         count++;
     }
     return count;

@@ -436,8 +436,8 @@ static int get_reg( RW_Battle *b, RW_Active_Robot *bot, int reg ) {
         case reg_robots:
             return RW_Alive_Robots(b);
         case reg_wall:
-            if( bot->regs[reg_x] < 10 || bot2->regs[reg_x] > 290 ||
-                bot->regs[reg_y] < 10 || bot2->regs[reg_y] > 290 ) {
+            if( bot->regs[reg_x] < 10 || bot->regs[reg_x] > 290 ||
+                bot->regs[reg_y] < 10 || bot->regs[reg_y] > 290 ) {
                 return 1;
             }
             else {
