@@ -13,7 +13,7 @@
 #include "battlehandler.h"
 
 static SDL_Surface *screen;
-static SDL_Surface *robo;
+static SDL_Surface *robo[6];
 static SDL_Surface *bullet;
 static SDL_Surface *explosion36;
 static SDL_Surface *explosion24;
@@ -135,7 +135,7 @@ static void display( RW_Battle *b ) {
     }
     RW_Reset_Robot_Iter(b, &ri, NULL);
     while( (bot = RW_Robot_Next(&ri)) ) {
-        draw_sprite(robo, bot->regs[reg_x] - 9, bot->regs[reg_y] - 9);
+        draw_sprite(robo[bot->id], bot->regs[reg_x] - 9, bot->regs[reg_y] - 9);
     }
     display_scores(b);
     SDL_Flip(screen);
@@ -238,7 +238,12 @@ int main( int argc, char **argv ) {
     screen = SDL_SetVideoMode(400, 300, 32, SDL_HWSURFACE|SDL_DOUBLEBUF);
     SDL_WM_SetCaption("New RoboWar", "New RoboWar");
     load_texture("bullet.png", &bullet);
-    load_texture("robot.png", &robo);
+    load_texture("robot.png", robo);
+    load_texture("robot2.png", robo+1);
+    load_texture("robot3.png", robo+2);
+    load_texture("robot4.png", robo+3);
+    load_texture("robot5.png", robo+4);
+    load_texture("robot6.png", robo+5);
     load_texture("explosion.png", &explosion36);
     load_texture("explosion24.png", &explosion24);
     load_texture("explosion12.png", &explosion12);

@@ -1,7 +1,7 @@
 # Makefile for development version of NewRobowar
 
 CC= clang
-CFLAGS= -g -W -Wall -Werror
+CFLAGS= -g -W -Wall -Werror -O3
 LIBS=
 
 # Build target directory

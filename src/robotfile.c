@@ -232,6 +232,8 @@ void * RW_Get_Resource_Copy( RW_Robot_File *rf, char *key, size_t *size,
     /* Need our own size/length variables for malloc because the passed-in ones
        might be null. */
     size_t s, l;
+    s = 0;
+    l = 0;
     old = RW_Get_Resource(rf, key, &s, &l);
     new = malloc(s * l);
     memcpy(new, old, s * l);
