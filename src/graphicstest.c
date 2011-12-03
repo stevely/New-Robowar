@@ -25,21 +25,28 @@ static int bot_count = 0;
 static int fps = 32;
 static int keyflag = 0;
 
-static void load_texture( const char *fname, SDL_Surface **sp ) {
+static SDL_Surface * load_texture( const char *fname ) {
     SDL_Surface *image;
-    image = IMG_Load(fname);
+    SDL_Surface *result;
+    image = IMG_Load(RW_Build_Path("img", fname));
     if( image ) { /* Create optimized sprite */
-        *sp = SDL_DisplayFormatAlpha(image);
-        if( *sp ) {
+        result = SDL_DisplayFormatAlpha(image);
+        if( result ) {
             SDL_FreeSurface(image);
         }
         else {
-            *sp = image;
+            result = image;
         }
+        return result;
     }
     else {
         fprintf(stdout, "load_texture\n");
+        return NULL;
     }
+}
+
+static TTF_Font * load_font( const char *fname, int size ) {
+    return TTF_OpenFont(RW_Build_Path("fonts", fname), size);
 }
 
 static SDL_Surface * load_text( int val ) {
@@ -217,6 +224,7 @@ int main( int argc, char **argv ) {
         fprintf(stdout, "Usage: %s robot [robot]+\n", argv[0]);
         return 0;
     }
+    RW_Set_Base_Dir(argv[0]);
     bots = (RW_Robot**)malloc(sizeof(RW_Robot*) * (argc - 1));
     for( i = 1; i < argc; i++ ) {
         bots[i-1] = (RW_Robot*)malloc(sizeof(RW_Robot));
@@ -237,19 +245,19 @@ int main( int argc, char **argv ) {
     }
     screen = SDL_SetVideoMode(400, 300, 32, SDL_HWSURFACE|SDL_DOUBLEBUF);
     SDL_WM_SetCaption("New RoboWar", "New RoboWar");
-    load_texture("bullet.png", &bullet);
-    load_texture("robot.png", robo);
-    load_texture("robot2.png", robo+1);
-    load_texture("robot3.png", robo+2);
-    load_texture("robot4.png", robo+3);
-    load_texture("robot5.png", robo+4);
-    load_texture("robot6.png", robo+5);
-    load_texture("explosion.png", &explosion36);
-    load_texture("explosion24.png", &explosion24);
-    load_texture("explosion12.png", &explosion12);
-    load_texture("stunner.png", &stunner);
-    load_texture("hellbore.png", &hellbore);
-    font = TTF_OpenFont("/System/Library/Fonts/HelveticaLight.ttf", 12);
+    bullet =      load_texture("bullet.png");
+    robo[0] =     load_texture("robot.png");
+    robo[1] =     load_texture("robot2.png");
+    robo[2] =     load_texture("robot3.png");
+    robo[3] =     load_texture("robot4.png");
+    robo[4] =     load_texture("robot5.png");
+    robo[5] =     load_texture("robot6.png");
+    explosion36 = load_texture("explosion.png");
+    explosion24 = load_texture("explosion24.png");
+    explosion12 = load_texture("explosion12.png");
+    stunner =     load_texture("stunner.png");
+    hellbore =    load_texture("hellbore.png");
+    font = load_font("DejaVuSans.ttf", 12);
     RW_Run_Duels(bots, bot_count, 1, b, run_chronon, after_fight);
     RW_Run_Groups(bots, bot_count, 1, b, run_chronon, after_fight);
     fprintf(stdout, "Score totals:\n");

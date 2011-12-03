@@ -10,6 +10,78 @@
 #include <stdlib.h>
 #include "robotfile.h"
 
+static char *base_dir = NULL;
+static int base_dir_length = 0;
+static char *temp_string = NULL;
+
+void RW_Set_Base_Dir( char *c ) {
+    int i, j;
+    /* Step 1: Capture last forward slash, if one exists */
+    j = 0;
+    for( i = 0; c[i]; i++ ) {
+        if( c[i] == '/' || c[i] == '\\' ) {
+            j = i+1;
+        }
+    }
+    /* We assume that calling this function twice will either fix a mistake or
+       simply result in the same string. Therefor on calls past the first we
+       first reset the current base directory. */
+    if( base_dir ) {
+        free(base_dir);
+        base_dir = NULL;
+        base_dir_length = 0;
+    }
+    /* Step 2: Check if there were no forward slashes (in current directory) */
+    if( j != 0 ) {
+        /* Step 3: Allocate and assign the path to the base directory */
+        base_dir = (char*)malloc((sizeof(char) * j) + 1);
+        memcpy(base_dir, c, j);
+        base_dir[j] = '\0';
+        base_dir_length = j; /* Doesn't include trailing \0 */
+    }
+    /* Step 4: If we're in the current directory, then we leave base_dir NULL */
+}
+
+/*
+ * This function creates a full path from the base path, an optional additional
+ * path, and a filename. The string created from this function should be
+ * considered temporary, as it will be freed on the next call to this function.
+ */
+char * RW_Build_Path( const char *path, const char *filename ) {
+    char *result;
+    int result_size, path_length, filename_length;
+    if( !filename ) {
+        return NULL;
+    }
+    /* Out with the old */
+    if( temp_string ) {
+        free(temp_string);
+    }
+    /* Get the final string size */
+    if( path ) {
+        path_length = strlen(path);
+    }
+    else {
+        path_length = 0;
+    }
+    filename_length = strlen(filename);
+    result_size = base_dir_length + path_length + filename_length;
+    /* In with the new */
+    temp_string = (char*)malloc((sizeof(char) * result_size) + 2);
+    result = temp_string;
+    memcpy(result, base_dir, base_dir_length);
+    result += base_dir_length;
+    memcpy(result, path, path_length);
+    result += path_length;
+    if( path_length > 0 ) {
+        *result = '/';
+        result++;
+    }
+    memcpy(result, filename, filename_length);
+    result[filename_length] = '\0';
+    return temp_string;
+}
+
 int RW_Check_Magic( char *magic ) {
     char m[] = RW_MAGIC;
     int i;
@@ -86,10 +158,6 @@ static RW_Robot_Index_List * build_index( FILE *fp ) {
             l->i.name[i] = buf[i];
         }
         /* Step 2: Get data length/size */
-        /*
-        fread(&(l->i.length), sizeof(uint32_t), 1, fp);
-        fread(&(l->i.size), sizeof(uint32_t), 1, fp);
-        */
         fread(&tmp, sizeof(uint32_t), 1, fp);
         l->i.length = tmp;
         fread(&tmp, sizeof(uint32_t), 1, fp);

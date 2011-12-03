@@ -63,6 +63,11 @@ typedef struct RW_Robot_File_Entry {
     struct RW_Robot_File_Entry *next;
 } RW_Robot_File_Entry;
 
+/* Dealing with file paths */
+void RW_Set_Base_Dir( char *c );
+
+char * RW_Build_Path( const char *path, const char *filename );
+
 /* Reading robot files */
 int RW_Check_Magic( char *magic );
 
